@@ -1,8 +1,19 @@
 #include "SerialLogger.h"
+#include "LogEntry.h"
 #include <cstring>
+
+static constexpr size_t kLogQueueSize = 8;
+static volatile bool s_txBusy = false;
+static LogEntry s_queue[kLogQueueSize];
+static size_t s_head = 0;
+static size_t s_tail = 0;
+static size_t s_count = 0;
 
 UART_HandleTypeDef huart1;
 ILogger *logger = new SerialLogger(&huart1);
+
+static bool EnqueueLog(const char *data, uint16_t len);
+static void StartNextTx(UART_HandleTypeDef *huart);
 
 void InitializeLogger() {
     huart1.Instance = USART1;
@@ -24,63 +35,78 @@ SerialLogger::SerialLogger(UART_HandleTypeDef* huart)
     : _huart(huart) {
 }
 
-namespace {
-    static constexpr uint32_t kLogUartTimeoutMs = 1000;
-    static constexpr size_t kLogBufferSize = 256;
-    static volatile bool s_txBusy = false;
-    static char s_txBuffer[kLogBufferSize];
+static bool EnqueueLog(const char *data, uint16_t len) {
+    if (s_count >= kLogQueueSize) {
+        return false;
+    }
+    LogEntry &entry = s_queue[s_tail];
+    if (len > kLogBufferSize) {
+        len = kLogBufferSize;
+    }
+    memcpy(entry.buf, data, len);
+    entry.len = len;
+    s_tail = (s_tail + 1) % kLogQueueSize;
+    ++s_count;
+    return true;
+}
 
-    bool WaitForTxIdle(uint32_t timeoutMs) {
-        uint32_t start = HAL_GetTick();
-        while (s_txBusy) {
-            if ((HAL_GetTick() - start) >= timeoutMs) {
-                return false;
-            }
-        }
-        return true;
+static void StartNextTx(UART_HandleTypeDef *huart) {
+    if (s_txBusy || s_count == 0) {
+        return;
+    }
+    LogEntry &entry = s_queue[s_head];
+    s_txBusy = true;
+    if (HAL_UART_Transmit_DMA(huart, (uint8_t *)entry.buf, entry.len) != HAL_OK) {
+        s_txBusy = false;
+        s_head = (s_head + 1) % kLogQueueSize;
+        --s_count;
     }
 }
 
 extern "C" void SerialLogger_OnTxComplete(UART_HandleTypeDef* huart) {
-    if (huart != nullptr && huart->Instance == USART1) {
-        s_txBusy = false;
+    if (!huart || huart->Instance != USART1) {
+        return;
     }
+    if (s_count > 0) {
+        s_head = (s_head + 1) % kLogQueueSize;
+        --s_count;
+    }
+    s_txBusy = false;
+    StartNextTx(huart);
 }
 
 void SerialLogger::Log(const ELogLevel level, const char *file, const int line, std::string &message) {
     const char *levelStr = GetLevelString(level);
 
     // Format: [LEVEL] [File:Line] Message
-    int headerLen = snprintf(s_txBuffer, sizeof(s_txBuffer), "[%s] [%s:%d] ",
+    char lineBuf[kLogBufferSize];
+    int headerLen = snprintf(lineBuf, sizeof(lineBuf), "[%s] [%s:%d] ",
                              levelStr, file, line);
     if (headerLen < 0) {
         return;
     }
-    if (headerLen >= static_cast<int>(sizeof(s_txBuffer))) {
-        headerLen = static_cast<int>(sizeof(s_txBuffer)) - 1;
+    size_t headerSize = static_cast<size_t>(headerLen);
+    if (headerSize >= sizeof(lineBuf)) {
+        headerSize = sizeof(lineBuf) - 1;
     }
 
-    const size_t maxPayload = sizeof(s_txBuffer) - 2;
+    const size_t maxPayload = sizeof(lineBuf) - 2;
     size_t msgLen = message.length();
-    if (static_cast<size_t>(headerLen) + msgLen > maxPayload) {
-        msgLen = (maxPayload > static_cast<size_t>(headerLen)) ? (maxPayload - static_cast<size_t>(headerLen)) : 0;
-    }
-
-    if (!WaitForTxIdle(kLogUartTimeoutMs)) {
-        return;
+    if (headerSize + msgLen > maxPayload) {
+        msgLen = (maxPayload > headerSize) ? (maxPayload - headerSize) : 0;
     }
 
     if (msgLen > 0) {
-        memcpy(s_txBuffer + headerLen, message.c_str(), msgLen);
+        memcpy(lineBuf + headerSize, message.c_str(), msgLen);
     }
-    s_txBuffer[headerLen + msgLen] = '\r';
-    s_txBuffer[headerLen + msgLen + 1] = '\n';
+    lineBuf[headerSize + msgLen] = '\r';
+    lineBuf[headerSize + msgLen + 1] = '\n';
 
-    const uint16_t totalLen = static_cast<uint16_t>(headerLen + msgLen + 2);
-    s_txBusy = true;
-    if (HAL_UART_Transmit_DMA(_huart, reinterpret_cast<uint8_t*>(s_txBuffer), totalLen) != HAL_OK) {
-        s_txBusy = false;
+    const uint16_t totalLen = static_cast<uint16_t>(headerSize + msgLen + 2);
+    if (!EnqueueLog(lineBuf, totalLen)) {
+        return;
     }
+    StartNextTx(_huart);
 }
 
 const char *SerialLogger::GetLevelString(const ELogLevel level) {
