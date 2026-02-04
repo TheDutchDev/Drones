@@ -11,6 +11,8 @@ extern "C" {
 #define HAL_DMA_MODULE_ENABLED
 #define HAL_RCC_MODULE_ENABLED
 #define HAL_GPIO_MODULE_ENABLED
+#define HAL_PWR_MODULE_ENABLED
+#define HAL_FLASH_MODULE_ENABLED
 #define HAL_UART_MODULE_ENABLED
 #define HAL_CORTEX_MODULE_ENABLED
 
@@ -57,6 +59,8 @@ extern "C" {
 #include "stm32f4xx_hal_rcc.h"
 #include "stm32f4xx_hal_gpio.h"
 #include "stm32f4xx_hal_dma.h"
+#include "stm32f4xx_hal_pwr.h"
+#include "stm32f4xx_hal_flash.h"
 #include "stm32f4xx_hal_uart.h"
 #include "stm32f4xx_hal_cortex.h"
 

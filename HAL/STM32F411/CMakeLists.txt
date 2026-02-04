@@ -46,6 +46,8 @@ file(GLOB_RECURSE STM32_PUBLIC_SOURCES
         ${DRIVER_DIR}/Src/stm32f4xx_hal_cortex.c
         ${DRIVER_DIR}/Src/stm32f4xx_hal_uart.c
         ${DRIVER_DIR}/Src/stm32f4xx_hal_rcc.c
+        ${DRIVER_DIR}/Src/stm32f4xx_hal_pwr.c
+        ${DRIVER_DIR}/Src/stm32f4xx_hal_flash.c
         ${DRIVER_DIR}/Src/stm32f4xx_hal_gpio.c
         ${DRIVER_DIR}/Src/stm32f4xx_hal_dma.c
         ${DRIVER_DIR}/Src/stm32f4xx_hal_iwdg.c

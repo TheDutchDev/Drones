@@ -1,10 +1,12 @@
 #include <ILogger.h>
 #include <ELogLevel.h>
+#include <ISystem.h>
 #include "Os.h"
 
 void RegisterServices();
 
 int main() {
+    InitializeSystem();
     InitializeLogger();
 
     RegisterServices();
