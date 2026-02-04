@@ -1,0 +1,5 @@
+include(${CMAKE_CURRENT_LIST_DIR}/modules.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/options.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/version.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/firmware.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/hal_selection.cmake)
