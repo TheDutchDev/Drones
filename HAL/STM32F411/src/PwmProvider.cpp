@@ -164,6 +164,12 @@ static bool IsTim3PinValid(HalTimerChannel channel, const HalPin &pin, uint32_t 
         return (pin.port == HalPort::A && pin.pin == 7) ||
                (pin.port == HalPort::B && pin.pin == 5);
     }
+    if (channel == HalTimerChannel::Ch3) {
+        return (pin.port == HalPort::B && pin.pin == 0);
+    }
+    if (channel == HalTimerChannel::Ch4) {
+        return (pin.port == HalPort::B && pin.pin == 1);
+    }
     return false;
 }
 

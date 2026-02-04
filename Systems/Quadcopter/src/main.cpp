@@ -17,27 +17,27 @@ int main() {
     RegisterServices();
 
     HalPwmConfig motor1Cfg{};
-    motor1Cfg.timer = HalTimer::Tim1;
+    motor1Cfg.timer = HalTimer::Tim3;
     motor1Cfg.channel = HalTimerChannel::Ch1;
-    motor1Cfg.pin = {HalPort::A, 8};
+    motor1Cfg.pin = {HalPort::B, 4};
     motor1Cfg.frequencyHz = 50;
 
     HalPwmConfig motor2Cfg{};
-    motor2Cfg.timer = HalTimer::Tim1;
+    motor2Cfg.timer = HalTimer::Tim3;
     motor2Cfg.channel = HalTimerChannel::Ch2;
-    motor2Cfg.pin = {HalPort::A, 9};
+    motor2Cfg.pin = {HalPort::B, 5};
     motor2Cfg.frequencyHz = 50;
 
     HalPwmConfig motor3Cfg{};
-    motor3Cfg.timer = HalTimer::Tim1;
+    motor3Cfg.timer = HalTimer::Tim3;
     motor3Cfg.channel = HalTimerChannel::Ch3;
-    motor3Cfg.pin = {HalPort::A, 10};
+    motor3Cfg.pin = {HalPort::B, 0};
     motor3Cfg.frequencyHz = 50;
 
     HalPwmConfig motor4Cfg{};
-    motor4Cfg.timer = HalTimer::Tim1;
+    motor4Cfg.timer = HalTimer::Tim3;
     motor4Cfg.channel = HalTimerChannel::Ch4;
-    motor4Cfg.pin = {HalPort::A, 11};
+    motor4Cfg.pin = {HalPort::B, 1};
     motor4Cfg.frequencyHz = 50;
 
     Data.GetMotor(0).PwmConfig().Modify(motor1Cfg);
