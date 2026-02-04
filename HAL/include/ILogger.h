@@ -5,6 +5,13 @@ extern void InitializeLogger();
 
 #ifdef ENABLE_LOGGING
 
+#include <cstring>
+
+#ifndef __FILE_NAME__
+#define __FILE_NAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : \
+                       (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__))
+#endif
+
 #include <string>
 #include "ELogLevel.h"
 
@@ -25,37 +32,37 @@ extern ILogger *logger;
 #endif
 
 #if LOG_LEVEL <= LOG_LEVEL_TRACE
-#define LOG_TRACE(...) logger->LogMessage(ELogLevel::Trace, __FILE__, __LINE__, __VA_ARGS__)
+#define LOG_TRACE(...) logger->LogMessage(ELogLevel::Trace, __FILE_NAME__, __LINE__, __VA_ARGS__)
 #else
 #define LOG_TRACE(...)
 #endif
 
 #if LOG_LEVEL <= LOG_LEVEL_DEBUG
-#define LOG_DEBUG(...) logger->LogMessage(ELogLevel::Debug, __FILE__, __LINE__, __VA_ARGS__)
+#define LOG_DEBUG(...) logger->LogMessage(ELogLevel::Debug, __FILE_NAME__, __LINE__, __VA_ARGS__)
 #else
 #define LOG_DEBUG(...)
 #endif
 
 #if LOG_LEVEL <= LOG_LEVEL_INFO
-#define LOG_INFO(...) logger->LogMessage(ELogLevel::Info, __FILE__, __LINE__, __VA_ARGS__)
+#define LOG_INFO(...) logger->LogMessage(ELogLevel::Info, __FILE_NAME__, __LINE__, __VA_ARGS__)
 #else
 #define LOG_INFO(...)
 #endif
 
 #if LOG_LEVEL <= LOG_LEVEL_WARNING
-#define LOG_WARNING(...) logger->LogMessage(ELogLevel::Warning, __FILE__, __LINE__, __VA_ARGS__)
+#define LOG_WARNING(...) logger->LogMessage(ELogLevel::Warning, __FILE_NAME__, __LINE__, __VA_ARGS__)
 #else
 #define LOG_WARNING(...)
 #endif
 
 #if LOG_LEVEL <= LOG_LEVEL_ERROR
-#define LOG_ERROR(...) logger->LogMessage(ELogLevel::Error, __FILE__, __LINE__, __VA_ARGS__)
+#define LOG_ERROR(...) logger->LogMessage(ELogLevel::Error, __FILE_NAME__, __LINE__, __VA_ARGS__)
 #else
 #define LOG_ERROR(...)
 #endif
 
 #if LOG_LEVEL <= LOG_LEVEL_FATAL
-#define LOG_FATAL(...) logger->LogMessage(ELogLevel::Fatal, __FILE__, __LINE__, __VA_ARGS__)
+#define LOG_FATAL(...) logger->LogMessage(ELogLevel::Fatal, __FILE_NAME__, __LINE__, __VA_ARGS__)
 #else
 #define LOG_FATAL(...)
 #endif
