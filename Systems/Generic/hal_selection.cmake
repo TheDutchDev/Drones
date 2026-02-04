@@ -21,6 +21,9 @@ if (HAL_TARGET MATCHES "STM32F411")
     add_definitions(-DSTM32F411xE)
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../../HAL/STM32F411 ${CMAKE_BINARY_DIR}/build_stm32f411)
     target_link_libraries(firmware PRIVATE stm32f411_hal)
+    target_sources(firmware PRIVATE
+            ${CMAKE_CURRENT_LIST_DIR}/../../HAL/STM32F411/src/hardware_config/stm32f4xx_hal_msp.c
+    )
 
 
     set_target_properties(firmware PROPERTIES LINK_FLAGS "-Wl,--gc-sections")

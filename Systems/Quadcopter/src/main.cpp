@@ -11,6 +11,7 @@ int main() {
 
     RegisterServices();
 
+    LOG_FATAL("HELLO");
     vTaskStartScheduler();
 
     // Should never reach this point since FreeRTOS Tasks should have started here

@@ -35,9 +35,7 @@ target_include_directories(stm32f411_hal SYSTEM
         ${DEVICE_DIR}/Include
 )
 
-file(GLOB_RECURSE STM32_PRIVATE_SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/src/hardware_config/*.c
-)
+set(STM32_PRIVATE_SOURCES)
 
 file(GLOB_RECURSE STM32_PUBLIC_SOURCES
         ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp
@@ -60,7 +58,6 @@ file(GLOB_RECURSE ASM_SOURCES
 
 target_sources(stm32f411_hal
         PRIVATE
-        ${STM32_PRIVATE_SOURCES}
         ${ASM_SOURCES}
 
         PUBLIC

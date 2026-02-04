@@ -19,7 +19,7 @@ extern "C" {
   /* ########################## Oscillator Values ############################## */
 
 #if !defined  (HSE_VALUE)
-#define HSE_VALUE    8000000U   /* External crystal frequency */
+#define HSE_VALUE    25000000U   /* External crystal frequency */
 #endif
 
 #if !defined  (HSI_VALUE)
