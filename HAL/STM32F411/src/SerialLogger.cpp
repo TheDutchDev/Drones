@@ -14,6 +14,8 @@ ILogger *logger = new SerialLogger(&huart1);
 
 static bool EnqueueLog(const char *data, uint16_t len);
 static void StartNextTx(UART_HandleTypeDef *huart);
+static uint16_t BuildLogLine(char *dst, size_t dstSize, const char *levelStr,
+                             const char *file, int line, const std::string &message);
 
 void InitializeLogger() {
     huart1.Instance = USART1;
@@ -75,34 +77,40 @@ extern "C" void SerialLogger_OnTxComplete(UART_HandleTypeDef* huart) {
     StartNextTx(huart);
 }
 
-void SerialLogger::Log(const ELogLevel level, const char *file, const int line, std::string &message) {
-    const char *levelStr = GetLevelString(level);
-
-    // Format: [LEVEL] [File:Line] Message
-    char lineBuf[kLogBufferSize];
-    int headerLen = snprintf(lineBuf, sizeof(lineBuf), "[%s] [%s:%d] ",
-                             levelStr, file, line);
+static uint16_t BuildLogLine(char *dst, size_t dstSize, const char *levelStr,
+                             const char *file, int line, const std::string &message) {
+    int headerLen = snprintf(dst, dstSize, "[%s] [%s:%d] ", levelStr, file, line);
     if (headerLen < 0) {
-        return;
-    }
-    size_t headerSize = static_cast<size_t>(headerLen);
-    if (headerSize >= sizeof(lineBuf)) {
-        headerSize = sizeof(lineBuf) - 1;
+        return 0;
     }
 
-    const size_t maxPayload = sizeof(lineBuf) - 2;
+    size_t headerSize = static_cast<size_t>(headerLen);
+    if (headerSize >= dstSize) {
+        headerSize = dstSize - 1;
+    }
+
+    const size_t maxPayload = dstSize - 2;
     size_t msgLen = message.length();
     if (headerSize + msgLen > maxPayload) {
         msgLen = (maxPayload > headerSize) ? (maxPayload - headerSize) : 0;
     }
 
     if (msgLen > 0) {
-        memcpy(lineBuf + headerSize, message.c_str(), msgLen);
+        memcpy(dst + headerSize, message.c_str(), msgLen);
     }
-    lineBuf[headerSize + msgLen] = '\r';
-    lineBuf[headerSize + msgLen + 1] = '\n';
+    dst[headerSize + msgLen] = '\r';
+    dst[headerSize + msgLen + 1] = '\n';
 
-    const uint16_t totalLen = static_cast<uint16_t>(headerSize + msgLen + 2);
+    return static_cast<uint16_t>(headerSize + msgLen + 2);
+}
+
+void SerialLogger::Log(const ELogLevel level, const char *file, const int line, std::string &message) {
+    const char *levelStr = GetLevelString(level);
+    char lineBuf[kLogBufferSize];
+    const uint16_t totalLen = BuildLogLine(lineBuf, sizeof(lineBuf), levelStr, file, line, message);
+    if (totalLen == 0) {
+        return;
+    }
     if (!EnqueueLog(lineBuf, totalLen)) {
         return;
     }
