@@ -2,12 +2,12 @@
 #include "LogEntry.h"
 #include <cstring>
 
-static constexpr size_t kLogQueueSize = 8;
-static volatile bool s_txBusy = false;
-static LogEntry s_queue[kLogQueueSize];
-static size_t s_head = 0;
-static size_t s_tail = 0;
-static size_t s_count = 0;
+static constexpr size_t LogQueueSize = 8;
+static volatile bool TxBusy = false;
+static LogEntry Queue[LogQueueSize];
+static size_t Head = 0;
+static size_t Tail = 0;
+static size_t Count = 0;
 
 UART_HandleTypeDef huart1;
 ILogger *logger = new SerialLogger(&huart1);
@@ -38,30 +38,30 @@ SerialLogger::SerialLogger(UART_HandleTypeDef* huart)
 }
 
 static bool EnqueueLog(const char *data, uint16_t len) {
-    if (s_count >= kLogQueueSize) {
+    if (Count >= LogQueueSize) {
         return false;
     }
-    LogEntry &entry = s_queue[s_tail];
-    if (len > kLogBufferSize) {
-        len = kLogBufferSize;
+    LogEntry &entry = Queue[Tail];
+    if (len > LogBufferSize) {
+        len = LogBufferSize;
     }
     memcpy(entry.buf, data, len);
     entry.len = len;
-    s_tail = (s_tail + 1) % kLogQueueSize;
-    ++s_count;
+    Tail = (Tail + 1) % LogQueueSize;
+    ++Count;
     return true;
 }
 
 static void StartNextTx(UART_HandleTypeDef *huart) {
-    if (s_txBusy || s_count == 0) {
+    if (TxBusy || Count == 0) {
         return;
     }
-    LogEntry &entry = s_queue[s_head];
-    s_txBusy = true;
+    LogEntry &entry = Queue[Head];
+    TxBusy = true;
     if (HAL_UART_Transmit_DMA(huart, (uint8_t *)entry.buf, entry.len) != HAL_OK) {
-        s_txBusy = false;
-        s_head = (s_head + 1) % kLogQueueSize;
-        --s_count;
+        TxBusy = false;
+        Head = (Head + 1) % LogQueueSize;
+        --Count;
     }
 }
 
@@ -69,11 +69,11 @@ extern "C" void SerialLogger_OnTxComplete(UART_HandleTypeDef* huart) {
     if (!huart || huart->Instance != USART1) {
         return;
     }
-    if (s_count > 0) {
-        s_head = (s_head + 1) % kLogQueueSize;
-        --s_count;
+    if (Count > 0) {
+        Head = (Head + 1) % LogQueueSize;
+        --Count;
     }
-    s_txBusy = false;
+    TxBusy = false;
     StartNextTx(huart);
 }
 
@@ -106,7 +106,7 @@ static uint16_t BuildLogLine(char *dst, size_t dstSize, const char *levelStr,
 
 void SerialLogger::Log(const ELogLevel level, const char *file, const int line, std::string &message) {
     const char *levelStr = GetLevelString(level);
-    char lineBuf[kLogBufferSize];
+    char lineBuf[LogBufferSize];
     const uint16_t totalLen = BuildLogLine(lineBuf, sizeof(lineBuf), levelStr, file, line, message);
     if (totalLen == 0) {
         return;

@@ -14,6 +14,7 @@ extern "C" {
 #define HAL_PWR_MODULE_ENABLED
 #define HAL_FLASH_MODULE_ENABLED
 #define HAL_UART_MODULE_ENABLED
+#define HAL_TIM_MODULE_ENABLED
 #define HAL_CORTEX_MODULE_ENABLED
 
   /* ########################## Oscillator Values ############################## */
@@ -62,6 +63,7 @@ extern "C" {
 #include "stm32f4xx_hal_pwr.h"
 #include "stm32f4xx_hal_flash.h"
 #include "stm32f4xx_hal_uart.h"
+#include "stm32f4xx_hal_tim.h"
 #include "stm32f4xx_hal_cortex.h"
 
   /* ########################## UART Configuration ############################ */

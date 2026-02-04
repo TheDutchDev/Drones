@@ -16,3 +16,9 @@ target_include_directories(interface_motors
         PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/include
 )
+
+add_properties(interface_motors)
+target_link_libraries(interface_motors
+        PUBLIC
+        interface_hal
+)

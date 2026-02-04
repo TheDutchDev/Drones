@@ -47,6 +47,7 @@ file(GLOB_RECURSE STM32_PUBLIC_SOURCES
         ${DRIVER_DIR}/Src/stm32f4xx_hal_pwr.c
         ${DRIVER_DIR}/Src/stm32f4xx_hal_flash.c
         ${DRIVER_DIR}/Src/stm32f4xx_hal_gpio.c
+        ${DRIVER_DIR}/Src/stm32f4xx_hal_tim.c
         ${DRIVER_DIR}/Src/stm32f4xx_hal_dma.c
         ${DRIVER_DIR}/Src/stm32f4xx_hal_iwdg.c
         ${DEVICE_DIR}/Source/Templates/*.c

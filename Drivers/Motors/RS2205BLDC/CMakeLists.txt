@@ -5,12 +5,9 @@ if (TARGET rs2205_bldc)
     return()
 endif ()
 
-if (NOT TARGET interface_motors)
-    set(INTERFACE_MOTORS_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../Interfaces/Motors)
-    add_subdirectory(${INTERFACE_MOTORS_DIR} ${CMAKE_BINARY_DIR}/build_interface_motors)
-endif ()
-
 add_library(rs2205_bldc STATIC)
+
+include(${CMAKE_CURRENT_LIST_DIR}/../../../Systems/Generic/modules.cmake)
 
 target_sources(rs2205_bldc
         PRIVATE
@@ -22,7 +19,8 @@ target_include_directories(rs2205_bldc
         ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
+add_motors(rs2205_bldc FALSE)
 target_link_libraries(rs2205_bldc
         PUBLIC
-        interface_motors
+        interface_hal
 )

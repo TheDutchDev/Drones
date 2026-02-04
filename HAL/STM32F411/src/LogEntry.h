@@ -4,11 +4,11 @@
 #include <cstddef>
 #include <cstdint>
 
-static constexpr size_t kLogBufferSize = 256;
+static constexpr size_t LogBufferSize = 256;
 
 struct LogEntry {
     uint16_t len = 0;
-    char buf[kLogBufferSize] = {};
+    char buf[LogBufferSize] = {};
 };
 
 #endif // LOGENTRY_H
