@@ -32,6 +32,28 @@ public:
     }
 
     /**
+     * @brief Register a singleton service by interface with an implementation key
+     * @tparam Interface The interface that this singleton implements from
+     * @tparam Implementation The implementation (class) of this singleton
+     * @tparam Dependencies Any dependencies that the implementation requires
+     */
+    template<typename Interface, typename Implementation, typename... Dependencies>
+    void RegisterSingletonWithInterfaceKeyed() {
+        RegisterWithInterfaceKeyed<Interface, Implementation, Dependencies...>(EServiceLifetime::Singleton);
+    }
+
+    /**
+     * @brief Register a transient service by interface with an implementation key
+     * @tparam Interface The interface that this transient implements from
+     * @tparam Implementation The implementation (class) of this transient
+     * @tparam Dependencies Any dependencies that the implementation requires
+     */
+    template<typename Interface, typename Implementation, typename... Dependencies>
+    void RegisterTransientWithInterfaceKeyed() {
+        RegisterWithInterfaceKeyed<Interface, Implementation, Dependencies...>(EServiceLifetime::Transient);
+    }
+
+    /**
      * @brief Register a singleton service by implementation
      * @tparam Implementation The implementation (class) of this singleton
      * @tparam Dependencies Any dependencies that the implementation requires
@@ -71,6 +93,26 @@ public:
     }
 
     /**
+     * @brief Resolve a keyed service by interface and implementation type
+     * @tparam Interface The interface the service was registered with
+     * @tparam Implementation The implementation type used as key
+     * @return When singleton: always the same instance of the given type. When transient: always a new instance of the given type
+     */
+    template<typename Interface, typename Implementation>
+    std::shared_ptr<Interface> ResolveKeyed() {
+        auto& service = GetKeyedService<Interface, Implementation>();
+
+        if (service.Lifetime == EServiceLifetime::Singleton) {
+            if (!service.Instance) {
+                service.Instance = service.Creator(this);
+            }
+            return std::static_pointer_cast<Interface>(service.Instance);
+        }
+
+        return std::static_pointer_cast<Interface>(service.Creator(this));
+    }
+
+    /**
      * @brief Resolve a service by interface or implementation type omitting specified overrides
      * @tparam Interface The interface or implementation that it was registered with
      * @tparam Overrides The overrides the container should NOT resolve
@@ -79,6 +121,30 @@ public:
     template<typename Interface, typename... Overrides>
     std::shared_ptr<Interface> Resolve(std::shared_ptr<Overrides>... provided) {
         auto& service = GetService<Interface>();
+
+        if (service.Lifetime == EServiceLifetime::Singleton) {
+            throw std::runtime_error("IocContainer: Resolving a new instance of singleton type: " + std::string(typeid(Interface).name()));
+        }
+
+        std::vector<std::pair<void*, std::shared_ptr<void>>> overrides = {
+            { TypeId<Overrides>(), provided }...
+        };
+
+        return std::static_pointer_cast<Interface>(
+            service.CreatorWithOverrides(this, overrides)
+        );
+    }
+
+    /**
+     * @brief Resolve a keyed service by interface and implementation type omitting specified overrides
+     * @tparam Interface The interface the service was registered with
+     * @tparam Implementation The implementation type used as key
+     * @tparam Overrides The overrides the container should NOT resolve
+     * @return When singleton: throws error since singletons can only have one instance. When transient: always a new instance of the given type
+     */
+    template<typename Interface, typename Implementation, typename... Overrides>
+    std::shared_ptr<Interface> ResolveKeyed(std::shared_ptr<Overrides>... provided) {
+        auto& service = GetKeyedService<Interface, Implementation>();
 
         if (service.Lifetime == EServiceLifetime::Singleton) {
             throw std::runtime_error("IocContainer: Resolving a new instance of singleton type: " + std::string(typeid(Interface).name()));
@@ -103,6 +169,7 @@ private:
     };
 
     std::unordered_map<void*, Service> _serviceRegistry;
+    std::unordered_map<void*, std::unordered_map<void*, Service>> _keyedServiceRegistry;
 
     template<typename Interface>
     Service& GetService( ) {
@@ -114,6 +181,21 @@ private:
         return it->second;
     }
 
+    template<typename Interface, typename Implementation>
+    Service& GetKeyedService() {
+        auto it = _keyedServiceRegistry.find(TypeId<Interface>());
+        if (it == _keyedServiceRegistry.end()) {
+            throw std::runtime_error("Type " + std::string(typeid(Interface).name()) + " not registered in IoC container");
+        }
+
+        auto keyed = it->second.find(TypeId<Implementation>());
+        if (keyed == it->second.end()) {
+            throw std::runtime_error("Type " + std::string(typeid(Implementation).name()) + " not registered in IoC container");
+        }
+
+        return keyed->second;
+    }
+
     template<typename Interface, typename Implementation, typename... Dependencies>
     void RegisterWithInterface(EServiceLifetime lifetime) {
         Service service;
@@ -122,6 +204,16 @@ private:
         service.CreatorWithOverrides = &CreateWithOverrides<Implementation, Dependencies...>;
         service.DependencyTypes = { TypeId<Dependencies>()... };
         _serviceRegistry[TypeId<Interface>()] = service;
+    }
+
+    template<typename Interface, typename Implementation, typename... Dependencies>
+    void RegisterWithInterfaceKeyed(EServiceLifetime lifetime) {
+        Service service;
+        service.Lifetime = lifetime;
+        service.Creator = &Create<Implementation, Dependencies...>;
+        service.CreatorWithOverrides = &CreateWithOverrides<Implementation, Dependencies...>;
+        service.DependencyTypes = { TypeId<Dependencies>()... };
+        _keyedServiceRegistry[TypeId<Interface>()][TypeId<Implementation>()] = service;
     }
 
     template<typename Implementation, typename... Dependencies>
