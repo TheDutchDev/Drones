@@ -10,6 +10,10 @@ function(add_di module_name include_module)
     endif ()
 endfunction()
 
+function(add_task_factory module_name)
+    add_module(TaskFactory module_task_factory ${module_name})
+endfunction()
+
 function(add_motors module_name include_module)
     add_interface(Motors interface_motors ${module_name} PUBLIC)
 
