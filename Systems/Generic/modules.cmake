@@ -22,6 +22,10 @@ function(add_motors module_name include_module)
     endif ()
 endfunction()
 
+function(add_motor_tasks module_name)
+    add_module(Motors module_motor_tasks ${module_name})
+endfunction()
+
 function(add_events target_name)
     add_interface(Events interface_events ${target_name} PUBLIC)
 endfunction()

@@ -2,20 +2,24 @@
 #define RS2205BLDCMOTOR_H
 
 #include <cstdint>
+#include <memory>
 
 #include "IMotor.h"
 #include "IMotorData.h"
 #include "IProperty.h"
 #include "PwmOutput.h"
 
+class IPwmProvider;
+
 class RS2205BLDCMotor final : public IMotor {
 public:
     RS2205BLDCMotor() = default;
-    explicit RS2205BLDCMotor(PwmOutput pwm, IMotorData *data = nullptr,
+    explicit RS2205BLDCMotor(std::shared_ptr<IMotorData> data,
+                             std::shared_ptr<IPwmProvider> pwmProvider,
                              float minDuty = 0.05f, float maxDuty = 0.10f, float disarmedDuty = 0.0f);
 
-    void Configure(PwmOutput pwm, IMotorData *data,
-                   float minDuty = 0.05f, float maxDuty = 0.10f, float disarmedDuty = 0.0f);
+    void Configure(float minDuty = 0.05f, float maxDuty = 0.10f,
+                   float disarmedDuty = 0.0f) override;
 
     void Initialize() override;
     void Arm() override;
@@ -32,7 +36,8 @@ private:
     void OnPropertyModified(IProperty *property);
 
     PwmOutput Pwm{};
-    IMotorData *Data = nullptr;
+    std::shared_ptr<IMotorData> Data{};
+    std::shared_ptr<IPwmProvider> PwmProvider{};
     IProperty *PwmConfigProperty = nullptr;
     IProperty *TargetProperty = nullptr;
     IProperty *MaxRpmProperty = nullptr;

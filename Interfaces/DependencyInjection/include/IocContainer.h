@@ -2,9 +2,10 @@
 #define IOCCONTAINER_H
 
 #include <memory>
+#include <stdexcept>
+#include <typeindex>
 #include <unordered_map>
 #include <vector>
-#include <stdexcept>
 #include "EServiceLifetime.h"
 
 class IocContainer {
@@ -162,7 +163,7 @@ public:
             throw std::runtime_error("IocContainer: Resolving a new instance of singleton type: " + std::string(typeid(Interface).name()));
         }
 
-        std::vector<std::pair<void*, std::shared_ptr<void>>> overrides = {
+        std::vector<std::pair<std::type_index, std::shared_ptr<void>>> overrides = {
             { TypeId<Overrides>(), provided }...
         };
 
@@ -186,7 +187,7 @@ public:
             throw std::runtime_error("IocContainer: Resolving a new instance of singleton type: " + std::string(typeid(Interface).name()));
         }
 
-        std::vector<std::pair<void*, std::shared_ptr<void>>> overrides = {
+        std::vector<std::pair<std::type_index, std::shared_ptr<void>>> overrides = {
             { TypeId<Overrides>(), provided }...
         };
 
@@ -200,12 +201,12 @@ private:
         EServiceLifetime Lifetime;
         std::shared_ptr<void> Instance;
         std::shared_ptr<void> (*Creator)(IocContainer*);
-        std::shared_ptr<void> (*CreatorWithOverrides)(IocContainer*, const std::vector<std::pair<void*, std::shared_ptr<void>>>& overrides);
-        std::vector<void*> DependencyTypes;
+        std::shared_ptr<void> (*CreatorWithOverrides)(IocContainer*, const std::vector<std::pair<std::type_index, std::shared_ptr<void>>>& overrides);
+        std::vector<std::type_index> DependencyTypes;
     };
 
-    std::unordered_map<void*, Service> _serviceRegistry;
-    std::unordered_map<void*, std::unordered_map<void*, Service>> _keyedServiceRegistry;
+    std::unordered_map<std::type_index, Service> _serviceRegistry;
+    std::unordered_map<std::type_index, std::unordered_map<std::type_index, Service>> _keyedServiceRegistry;
 
     template<typename Interface>
     Service& GetService( ) {
@@ -260,7 +261,7 @@ private:
     template<typename Implementation, typename... Dependencies>
     static std::shared_ptr<void> CreateWithOverrides(
         IocContainer* container,
-        const std::vector<std::pair<void*, std::shared_ptr<void>>>& overrides
+        const std::vector<std::pair<std::type_index, std::shared_ptr<void>>>& overrides
     ) {
         return std::make_shared<Implementation>(
             ResolveOrOverride<Dependencies>(container, overrides)...);
@@ -280,12 +281,12 @@ private:
     template<typename T>
     static auto ResolveOrOverride(
         IocContainer* container,
-        const std::vector<std::pair<void*, std::shared_ptr<void>>>& overrides
+        const std::vector<std::pair<std::type_index, std::shared_ptr<void>>>& overrides
     ) {
         if constexpr (IsKeyed<T>::value) {
             using Interface = typename T::InterfaceType;
             using Implementation = typename T::ImplementationType;
-            void* key = TypeId<KeyedOverride<Interface, Implementation>>();
+            auto key = TypeId<KeyedOverride<Interface, Implementation>>();
             for (const auto& [type, instance] : overrides) {
                 if (type == key) {
                     auto wrapper = std::static_pointer_cast<KeyedOverride<Interface, Implementation>>(instance);
@@ -294,7 +295,7 @@ private:
             }
             return container->ResolveKeyed<Interface, Implementation>();
         }
-        void* key = TypeId<T>();
+        auto key = TypeId<T>();
         for (const auto& [type, instance] : overrides) {
             if (type == key) {
                 return std::static_pointer_cast<T>(instance);
@@ -314,9 +315,8 @@ private:
     };
 
     template<typename T>
-    static void* TypeId() {
-        static char id;
-        return &id;
+    static std::type_index TypeId() {
+        return std::type_index(typeid(T));
     }
 };
 

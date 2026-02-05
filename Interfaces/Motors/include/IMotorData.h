@@ -4,7 +4,9 @@
 #include "PwmConfig.h"
 #include "Property.h"
 
-struct IMotorData {
+class IMotorData {
+
+public:
     Property<HalPwmConfig> PwmConfig{};
     Property<float> MaxRpm{};
     Property<float> TargetRpm{};

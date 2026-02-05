@@ -1,3 +1,4 @@
 #include "IocContainer.h"
 
-IocContainer *container = new IocContainer();
+static IocContainer containerInstance{};
+IocContainer *container = &containerInstance;
