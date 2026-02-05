@@ -3,7 +3,7 @@
 # This file fetches version information from version.cmake file and stores it in shell variables to be used later on
 
 # Path to version.cmake
-VERSION_FILE="SubSystems/Generic/version.cmake"
+VERSION_FILE="Systems/Generic/version.cmake"
 
 get_version_value() {
     local var_name="$1"
