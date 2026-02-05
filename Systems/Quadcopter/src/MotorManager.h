@@ -15,6 +15,8 @@ public:
     void SetTargetRpm(size_t index, float rpm);
 
 private:
+    static IMotorData *ResolveMotor(DataModule *data, size_t index);
+
     struct MotorTaskContext {
         RS2205BLDCMotor *motor = nullptr;
         IMotorData *data = nullptr;

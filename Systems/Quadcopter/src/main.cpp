@@ -1,4 +1,5 @@
 #include "DataModule.h"
+#include "IocContainer.h"
 #include "IPwmProvider.h"
 #include "ILogger.h"
 #include "ISystem.h"
@@ -7,7 +8,6 @@
 
 void RegisterServices();
 
-static DataModule Data;
 static MotorManager MotorControl;
 
 int main() {
@@ -15,6 +15,8 @@ int main() {
     InitializeLogger();
 
     RegisterServices();
+
+    auto data = container->Resolve<DataModule>();
 
     HalPwmConfig motor1Cfg{};
     motor1Cfg.timer = HalTimer::Tim3;
@@ -40,23 +42,23 @@ int main() {
     motor4Cfg.pin = {HalPort::B, 1};
     motor4Cfg.frequencyHz = 50;
 
-    Data.Motors[0].PwmConfig.Modify(motor1Cfg);
-    Data.Motors[0].MaxRpm.Modify(12000.0f);
-    Data.Motors[0].TargetRpm.Modify(0.0f);
+    data->Motor1->PwmConfig.Modify(motor1Cfg);
+    data->Motor1->MaxRpm.Modify(12000.0f);
+    data->Motor1->TargetRpm.Modify(0.0f);
 
-    Data.Motors[1].PwmConfig.Modify(motor2Cfg);
-    Data.Motors[1].MaxRpm.Modify(12000.0f);
-    Data.Motors[1].TargetRpm.Modify(0.0f);
+    data->Motor2->PwmConfig.Modify(motor2Cfg);
+    data->Motor2->MaxRpm.Modify(12000.0f);
+    data->Motor2->TargetRpm.Modify(0.0f);
 
-    Data.Motors[2].PwmConfig.Modify(motor3Cfg);
-    Data.Motors[2].MaxRpm.Modify(12000.0f);
-    Data.Motors[2].TargetRpm.Modify(0.0f);
+    data->Motor3->PwmConfig.Modify(motor3Cfg);
+    data->Motor3->MaxRpm.Modify(12000.0f);
+    data->Motor3->TargetRpm.Modify(0.0f);
 
-    Data.Motors[3].PwmConfig.Modify(motor4Cfg);
-    Data.Motors[3].MaxRpm.Modify(12000.0f);
-    Data.Motors[3].TargetRpm.Modify(0.0f);
+    data->Motor4->PwmConfig.Modify(motor4Cfg);
+    data->Motor4->MaxRpm.Modify(12000.0f);
+    data->Motor4->TargetRpm.Modify(0.0f);
 
-    MotorControl.Initialize(Data, GetPwmProvider());
+    MotorControl.Initialize(*data, GetPwmProvider());
     MotorControl.StartAll();
 
     LOG_FATAL("HELLO");
@@ -68,4 +70,6 @@ int main() {
 }
 
 void RegisterServices() {
+    container->RegisterTransientClass<IMotorData>();
+    container->RegisterSingletonClass<DataModule, IMotorData, IMotorData, IMotorData, IMotorData>();
 }
