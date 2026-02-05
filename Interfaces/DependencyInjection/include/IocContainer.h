@@ -21,6 +21,31 @@ public:
     };
 
     /**
+     * @brief Wrapper type for keyed overrides
+     * @tparam Interface The interface to override
+     * @tparam Implementation The implementation type used as key
+     */
+    template<typename Interface, typename Implementation>
+    struct KeyedOverride {
+        std::shared_ptr<Interface> Value;
+    };
+
+    /**
+     * @brief Helper to build a keyed override instance
+     * @tparam Interface The interface to override
+     * @tparam Implementation The implementation type used as key
+     * @param instance The instance to provide as override
+     */
+    template<typename Interface, typename Implementation>
+    static std::shared_ptr<KeyedOverride<Interface, Implementation>> OverrideKeyed(
+        std::shared_ptr<Interface> instance
+    ) {
+        auto wrapper = std::make_shared<KeyedOverride<Interface, Implementation>>();
+        wrapper->Value = std::move(instance);
+        return wrapper;
+    }
+
+    /**
      * @brief Register a singleton service by interface
      * @tparam Interface The interface that this singleton implements from
      * @tparam Implementation The implementation (class) of this singleton
@@ -260,10 +285,11 @@ private:
         if constexpr (IsKeyed<T>::value) {
             using Interface = typename T::InterfaceType;
             using Implementation = typename T::ImplementationType;
-            void* key = TypeId<Interface>();
+            void* key = TypeId<KeyedOverride<Interface, Implementation>>();
             for (const auto& [type, instance] : overrides) {
                 if (type == key) {
-                    return std::static_pointer_cast<Interface>(instance);
+                    auto wrapper = std::static_pointer_cast<KeyedOverride<Interface, Implementation>>(instance);
+                    return wrapper ? wrapper->Value : std::shared_ptr<Interface>{};
                 }
             }
             return container->ResolveKeyed<Interface, Implementation>();
