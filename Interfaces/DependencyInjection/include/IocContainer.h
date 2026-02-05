@@ -10,6 +10,17 @@
 class IocContainer {
 public:
     /**
+     * @brief Tag type for keyed dependency injection
+     * @tparam Interface The interface to resolve
+     * @tparam Implementation The implementation type used as key
+     */
+    template<typename Interface, typename Implementation>
+    struct Keyed {
+        using InterfaceType = Interface;
+        using ImplementationType = Implementation;
+    };
+
+    /**
      * @brief Register a singleton service by interface
      * @tparam Interface The interface that this singleton implements from
      * @tparam Implementation The implementation (class) of this singleton
@@ -218,7 +229,7 @@ private:
 
     template<typename Implementation, typename... Dependencies>
     static std::shared_ptr<void> Create(IocContainer* container) {
-        return std::make_shared<Implementation>(container->Resolve<Dependencies>()...);
+        return std::make_shared<Implementation>(ResolveDependency<Dependencies>(container)...);
     }
 
     template<typename Implementation, typename... Dependencies>
@@ -231,10 +242,32 @@ private:
     }
 
     template<typename T>
-    static std::shared_ptr<T> ResolveOrOverride(
+    static auto ResolveDependency(IocContainer* container) {
+        if constexpr (IsKeyed<T>::value) {
+            using Interface = typename T::InterfaceType;
+            using Implementation = typename T::ImplementationType;
+            return container->ResolveKeyed<Interface, Implementation>();
+        } else {
+            return container->Resolve<T>();
+        }
+    }
+
+    template<typename T>
+    static auto ResolveOrOverride(
         IocContainer* container,
         const std::vector<std::pair<void*, std::shared_ptr<void>>>& overrides
     ) {
+        if constexpr (IsKeyed<T>::value) {
+            using Interface = typename T::InterfaceType;
+            using Implementation = typename T::ImplementationType;
+            void* key = TypeId<Interface>();
+            for (const auto& [type, instance] : overrides) {
+                if (type == key) {
+                    return std::static_pointer_cast<Interface>(instance);
+                }
+            }
+            return container->ResolveKeyed<Interface, Implementation>();
+        }
         void* key = TypeId<T>();
         for (const auto& [type, instance] : overrides) {
             if (type == key) {
@@ -243,6 +276,16 @@ private:
         }
         return container->Resolve<T>();
     }
+
+    template<typename T>
+    struct IsKeyed {
+        static constexpr bool value = false;
+    };
+
+    template<typename Interface, typename Implementation>
+    struct IsKeyed<Keyed<Interface, Implementation>> {
+        static constexpr bool value = true;
+    };
 
     template<typename T>
     static void* TypeId() {
