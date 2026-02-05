@@ -1,8 +1,8 @@
 #include "DataModule.h"
 #include "IPwmProvider.h"
 #include "ILogger.h"
-#include "MotorManager.h"
 #include "ISystem.h"
+#include "MotorManager.h"
 #include "Os.h"
 
 void RegisterServices();
@@ -40,21 +40,21 @@ int main() {
     motor4Cfg.pin = {HalPort::B, 1};
     motor4Cfg.frequencyHz = 50;
 
-    Data.GetMotor(0).PwmConfig().Modify(motor1Cfg);
-    Data.GetMotor(0).MaxRpm().Modify(12000.0f);
-    Data.GetMotor(0).TargetRpm().Modify(0.0f);
+    Data.Motors[0].PwmConfig.Modify(motor1Cfg);
+    Data.Motors[0].MaxRpm.Modify(12000.0f);
+    Data.Motors[0].TargetRpm.Modify(0.0f);
 
-    Data.GetMotor(1).PwmConfig().Modify(motor2Cfg);
-    Data.GetMotor(1).MaxRpm().Modify(12000.0f);
-    Data.GetMotor(1).TargetRpm().Modify(0.0f);
+    Data.Motors[1].PwmConfig.Modify(motor2Cfg);
+    Data.Motors[1].MaxRpm.Modify(12000.0f);
+    Data.Motors[1].TargetRpm.Modify(0.0f);
 
-    Data.GetMotor(2).PwmConfig().Modify(motor3Cfg);
-    Data.GetMotor(2).MaxRpm().Modify(12000.0f);
-    Data.GetMotor(2).TargetRpm().Modify(0.0f);
+    Data.Motors[2].PwmConfig.Modify(motor3Cfg);
+    Data.Motors[2].MaxRpm.Modify(12000.0f);
+    Data.Motors[2].TargetRpm.Modify(0.0f);
 
-    Data.GetMotor(3).PwmConfig().Modify(motor4Cfg);
-    Data.GetMotor(3).MaxRpm().Modify(12000.0f);
-    Data.GetMotor(3).TargetRpm().Modify(0.0f);
+    Data.Motors[3].PwmConfig.Modify(motor4Cfg);
+    Data.Motors[3].MaxRpm.Modify(12000.0f);
+    Data.Motors[3].TargetRpm.Modify(0.0f);
 
     MotorControl.Initialize(Data, GetPwmProvider());
     MotorControl.StartAll();

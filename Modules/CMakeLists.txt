@@ -1,0 +1,1 @@
+add_di(firmware true)

@@ -69,26 +69,26 @@ void RS2205BLDCMotor::SubscribeToData(IMotorData *data) {
         return;
     }
 
-    PwmConfigProperty = &Data->PwmConfig();
-    TargetProperty = &Data->TargetRpm();
-    MaxRpmProperty = &Data->MaxRpm();
+    PwmConfigProperty = &Data->PwmConfig;
+    TargetProperty = &Data->TargetRpm;
+    MaxRpmProperty = &Data->MaxRpm;
 
-    PwmConfigValue = Data->PwmConfig().Get();
-    TargetRpm = Data->TargetRpm().Get();
-    MaxRpm = Data->MaxRpm().Get();
+    PwmConfigValue = Data->PwmConfig.Get();
+    TargetRpm = Data->TargetRpm.Get();
+    MaxRpm = Data->MaxRpm.Get();
 
-    Data->PwmConfig().OnModified().Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
-    Data->TargetRpm().OnModified().Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
-    Data->MaxRpm().OnModified().Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    Data->PwmConfig.OnModified().Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    Data->TargetRpm.OnModified().Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    Data->MaxRpm.OnModified().Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
 }
 
 void RS2205BLDCMotor::UnsubscribeFromData() {
     if (!Data) {
         return;
     }
-    Data->PwmConfig().OnModified().Unsubscribe(this, &RS2205BLDCMotor::OnPropertyModified);
-    Data->TargetRpm().OnModified().Unsubscribe(this, &RS2205BLDCMotor::OnPropertyModified);
-    Data->MaxRpm().OnModified().Unsubscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    Data->PwmConfig.OnModified().Unsubscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    Data->TargetRpm.OnModified().Unsubscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    Data->MaxRpm.OnModified().Unsubscribe(this, &RS2205BLDCMotor::OnPropertyModified);
     Data = nullptr;
     PwmConfigProperty = nullptr;
     TargetProperty = nullptr;
@@ -100,10 +100,10 @@ void RS2205BLDCMotor::OnPropertyModified(IProperty *property) {
         return;
     }
     if (property == PwmConfigProperty) {
-        PwmConfigValue = Data->PwmConfig().Get();
+        PwmConfigValue = Data->PwmConfig.Get();
     } else if (property == TargetProperty) {
-        TargetRpm = Data->TargetRpm().Get();
+        TargetRpm = Data->TargetRpm.Get();
     } else if (property == MaxRpmProperty) {
-        MaxRpm = Data->MaxRpm().Get();
+        MaxRpm = Data->MaxRpm.Get();
     }
 }

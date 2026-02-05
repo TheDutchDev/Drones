@@ -30,10 +30,7 @@ file(GLOB_RECURSE C_SOURCES
 
 target_sources(firmware PUBLIC ${C_SOURCES})
 
-option(USE_RS2205_BLDC "Enable RS2205 BLDC motor driver" ON)
-if (USE_RS2205_BLDC)
-    add_events(firmware)
-    add_properties(firmware)
-    add_motors(firmware FALSE)
-    add_rs2205_bldc(firmware)
-endif ()
+add_events(firmware)
+add_properties(firmware)
+add_motors(firmware FALSE)
+add_rs2205_bldc(firmware)

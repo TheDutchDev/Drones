@@ -10,19 +10,19 @@ void MotorManager::Initialize(DataModule &data, IPwmProvider *pwmProvider) {
     for (size_t i = 0; i < DataModule::MotorCount; ++i) {
         PwmOutput output{};
         if (Pwm) {
-            output = Pwm->Create(Data->GetMotor(i).PwmConfig().Get());
+            output = Pwm->Create(Data->Motors[i].PwmConfig.Get());
         }
 
-        Motors[i].Configure(output, &Data->GetMotor(i), 0.05f, 0.10f);
+        Motors[i].Configure(output, &Data->Motors[i], 0.05f, 0.10f);
         Motors[i].Initialize();
         Motors[i].Arm();
 
         Tasks[i].motor = &Motors[i];
-        Tasks[i].data = &Data->GetMotor(i);
-        TargetProperties[i] = &Tasks[i].data->TargetRpm();
-        MaxRpmProperties[i] = &Tasks[i].data->MaxRpm();
-        Tasks[i].data->TargetRpm().OnModified().Subscribe(this, &MotorManager::OnTargetRpmChanged);
-        Tasks[i].data->MaxRpm().OnModified().Subscribe(this, &MotorManager::OnTargetRpmChanged);
+        Tasks[i].data = &Data->Motors[i];
+        TargetProperties[i] = &Tasks[i].data->TargetRpm;
+        MaxRpmProperties[i] = &Tasks[i].data->MaxRpm;
+        Tasks[i].data->TargetRpm.OnModified().Subscribe(this, &MotorManager::OnTargetRpmChanged);
+        Tasks[i].data->MaxRpm.OnModified().Subscribe(this, &MotorManager::OnTargetRpmChanged);
 
         if (!TasksCreated) {
             xTaskCreate(MotorTask, "Motor", MotorTaskStack, &Tasks[i],
@@ -54,7 +54,7 @@ void MotorManager::SetTargetRpm(size_t index, float rpm) {
     if (!Data || index >= DataModule::MotorCount) {
         return;
     }
-    Data->GetMotor(index).TargetRpm().Modify(rpm);
+    Data->Motors[index].TargetRpm.Modify(rpm);
 }
 
 void MotorManager::MotorTask(void *param) {
