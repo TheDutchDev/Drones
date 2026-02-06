@@ -24,6 +24,7 @@ add_subdirectory(${FREERTOS_KERNEL_PATH} FreeRTOS-Kernel)
 target_sources(freertos_kernel
         PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/src/FreeRTOSHooks.c
+        ${CMAKE_CURRENT_LIST_DIR}/src/FreeRTOSOverloads.cpp
 )
 
 set_property(TARGET freertos_kernel PROPERTY C_STANDARD 90)
