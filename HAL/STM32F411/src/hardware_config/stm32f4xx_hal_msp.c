@@ -4,6 +4,11 @@ extern void SerialLogger_OnTxComplete(UART_HandleTypeDef* huart);
 
 static DMA_HandleTypeDef hdma_usart1_tx;
 
+void ForceHalMspLink(void)
+{
+    /* Ensures this translation unit is linked so HAL UART MSP overrides are used. */
+}
+
 void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};

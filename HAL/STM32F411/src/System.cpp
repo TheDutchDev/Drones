@@ -1,9 +1,12 @@
 #include "ISystem.h"
 #include "stm32f4xx_hal.h"
 
+extern "C" void ForceHalMspLink(void);
+
 static void SystemClock_Config();
 
 void InitializeSystem() {
+    ForceHalMspLink();
     HAL_Init();
     SystemClock_Config();
 }
