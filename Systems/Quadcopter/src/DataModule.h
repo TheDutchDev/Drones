@@ -19,10 +19,10 @@ public:
         Motor3(std::move(motor3)),
         Motor4(std::move(motor4)) {
 
-        _dataModels.push_back(motor1);
-        _dataModels.push_back(motor2);
-        _dataModels.push_back(motor3);
-        _dataModels.push_back(motor4);
+        _dataModels.push_back(Motor1);
+        _dataModels.push_back(Motor2);
+        _dataModels.push_back(Motor3);
+        _dataModels.push_back(Motor4);
 
         IDataModule::HookDataModels();
 
