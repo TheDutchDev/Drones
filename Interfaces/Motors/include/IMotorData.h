@@ -1,15 +1,22 @@
 #ifndef IMOTORDATA_H
 #define IMOTORDATA_H
 
-#include "PwmConfig.h"
-#include "Property.h"
+#include "IDataModel.h"
+#include "IFloatProperty.h"
+#include "IProperty.h"
 
-class IMotorData {
+class IMotorData : public IDataModel {
 
 public:
-    Property<HalPwmConfig> PwmConfig{};
-    Property<float> MaxRpm{};
-    Property<float> TargetRpm{};
+    IMotorData() {
+        RegisterProperty(MaxRpm);
+        RegisterProperty(TargetRpm);
+
+        IDataModel::HookDataModels();
+    }
+
+    IFloatProperty MaxRpm = IFloatProperty(100, 0, 100, EPropertyType::MaxRpm);
+    IFloatProperty TargetRpm = IFloatProperty(100, 0, 100, EPropertyType::TargetRpm);
 };
 
 #endif // IMOTORDATA_H

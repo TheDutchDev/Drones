@@ -1,9 +1,10 @@
 #ifndef IOCCONTAINER_H
 #define IOCCONTAINER_H
 
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <typeindex>
+#include <typeinfo>
 #include <unordered_map>
 #include <vector>
 #include "EServiceLifetime.h"
@@ -163,7 +164,7 @@ public:
             throw std::runtime_error("IocContainer: Resolving a new instance of singleton type: " + std::string(typeid(Interface).name()));
         }
 
-        std::vector<std::pair<std::type_index, std::shared_ptr<void>>> overrides = {
+        std::vector<std::pair<const std::type_info*, std::shared_ptr<void>>> overrides = {
             { TypeId<Overrides>(), provided }...
         };
 
@@ -187,7 +188,7 @@ public:
             throw std::runtime_error("IocContainer: Resolving a new instance of singleton type: " + std::string(typeid(Interface).name()));
         }
 
-        std::vector<std::pair<std::type_index, std::shared_ptr<void>>> overrides = {
+        std::vector<std::pair<const std::type_info*, std::shared_ptr<void>>> overrides = {
             { TypeId<Overrides>(), provided }...
         };
 
@@ -201,12 +202,24 @@ private:
         EServiceLifetime Lifetime;
         std::shared_ptr<void> Instance;
         std::shared_ptr<void> (*Creator)(IocContainer*);
-        std::shared_ptr<void> (*CreatorWithOverrides)(IocContainer*, const std::vector<std::pair<std::type_index, std::shared_ptr<void>>>& overrides);
-        std::vector<std::type_index> DependencyTypes;
+        std::shared_ptr<void> (*CreatorWithOverrides)(IocContainer*, const std::vector<std::pair<const std::type_info*, std::shared_ptr<void>>>& overrides);
+        std::vector<const std::type_info*> DependencyTypes;
     };
 
-    std::unordered_map<std::type_index, Service> _serviceRegistry;
-    std::unordered_map<std::type_index, std::unordered_map<std::type_index, Service>> _keyedServiceRegistry;
+    struct TypeInfoHash {
+        size_t operator()(const std::type_info* type) const noexcept {
+            return std::hash<std::uintptr_t>()(reinterpret_cast<std::uintptr_t>(type));
+        }
+    };
+
+    struct TypeInfoEqual {
+        bool operator()(const std::type_info* lhs, const std::type_info* rhs) const noexcept {
+            return lhs == rhs;
+        }
+    };
+
+    std::unordered_map<const std::type_info*, Service, TypeInfoHash, TypeInfoEqual> _serviceRegistry;
+    std::unordered_map<const std::type_info*, std::unordered_map<const std::type_info*, Service, TypeInfoHash, TypeInfoEqual>, TypeInfoHash, TypeInfoEqual> _keyedServiceRegistry;
 
     template<typename Interface>
     Service& GetService( ) {
@@ -261,7 +274,7 @@ private:
     template<typename Implementation, typename... Dependencies>
     static std::shared_ptr<void> CreateWithOverrides(
         IocContainer* container,
-        const std::vector<std::pair<std::type_index, std::shared_ptr<void>>>& overrides
+        const std::vector<std::pair<const std::type_info*, std::shared_ptr<void>>>& overrides
     ) {
         return std::make_shared<Implementation>(
             ResolveOrOverride<Dependencies>(container, overrides)...);
@@ -281,7 +294,7 @@ private:
     template<typename T>
     static auto ResolveOrOverride(
         IocContainer* container,
-        const std::vector<std::pair<std::type_index, std::shared_ptr<void>>>& overrides
+        const std::vector<std::pair<const std::type_info*, std::shared_ptr<void>>>& overrides
     ) {
         if constexpr (IsKeyed<T>::value) {
             using Interface = typename T::InterfaceType;
@@ -315,8 +328,8 @@ private:
     };
 
     template<typename T>
-    static std::type_index TypeId() {
-        return std::type_index(typeid(T));
+    static const std::type_info* TypeId() {
+        return &typeid(T);
     }
 };
 

@@ -1,120 +1,117 @@
 #ifndef EVENT_H
 #define EVENT_H
 
-#include <cstddef>
-#include <cstring>
+#include <memory>
+#include "Callback.h"
 
-template<typename... Args>
+#define INVALID_EVENT_ID (-1)
+
+template<int MaxSize, typename... Args>
 class Event {
 public:
-    template<typename T>
-    bool Subscribe(T *instance, void (T::*method)(Args...)) {
-        if (!instance || !method) {
-            return false;
-        }
-        static_assert(sizeof(method) <= MemberPointerSize, "Member pointer too large for Event");
-        return AddSlot(instance, &InvokeMember<T>, &method, sizeof(method));
+    ~Event() {
+        Reset();
     }
 
-    template<typename T>
-    bool Subscribe(T *instance, void (T::*method)(Args...) const) {
-        if (!instance || !method) {
-            return false;
+    void Reset() {
+        for(auto &callback: _callbacks) {
+            if(callback == nullptr)
+                continue;
+
+            delete callback;
+            callback = nullptr;
         }
-        static_assert(sizeof(method) <= MemberPointerSize, "Member pointer too large for Event");
-        return AddSlot(instance, &InvokeConstMember<T>, &method, sizeof(method));
     }
 
+    /**
+     * @brief Subscribe to a given event (for member functions)
+     * @param instance The instance of the class subscribing to the event
+     * @param callback The member function pointer of the instance that should be called when the event is triggered
+     * @returns INVALID_EVENT_ID if no more callbacks can be registered to this event. Or a positive value with the event ID if succeeded
+     */
     template<typename T>
-    void Unsubscribe(T *instance, void (T::*method)(Args...)) {
-        if (!instance || !method) {
-            return;
-        }
-        RemoveSlot(instance, &InvokeMember<T>, &method, sizeof(method));
-    }
-
-    template<typename T>
-    void Unsubscribe(T *instance, void (T::*method)(Args...) const) {
-        if (!instance || !method) {
-            return;
-        }
-        RemoveSlot(instance, &InvokeConstMember<T>, &method, sizeof(method));
-    }
-
-    void Emit(Args... args) {
-        for (size_t i = 0; i < MaxSubscribers; ++i) {
-            if (_slots[i].invoke) {
-                _slots[i].invoke(_slots[i].instance, _slots[i].method, args...);
+    int Subscribe(T *instance, void (T::*method)(Args...)) {
+        for(int idx = 0; idx < MaxSize; idx++) {
+            if(_callbacks[idx] == nullptr) {
+                _callbacks[idx] = new Callback<T, Args...>(instance, method);
+                return idx;
             }
         }
+        return INVALID_EVENT_ID;
     }
 
-private:
-    struct MemberPointerProbe {
-        void Dummy() {
-        }
-    };
-
-    using InvokeFn = void (*)(void *instance, const unsigned char *method, Args... args);
-
-    struct Slot {
-        void *instance = nullptr;
-        InvokeFn invoke = nullptr;
-        unsigned char method[sizeof(void (MemberPointerProbe::*)())] = {};
-    };
-
-    static constexpr size_t MaxSubscribers = 8;
-    static constexpr size_t MemberPointerSize = sizeof(void (MemberPointerProbe::*)());
-
+    /**
+     * @brief Subscribe to a given event (for member functions)
+     * @param owner The event owner of this callback
+     * @param instance The instance of the class subscribing to the event
+     * @param callback The member function pointer of the instance that should be called when the event is triggered
+     * @returns false if another class has already registered to this event with same owner. True otherwise.
+     */
     template<typename T>
-    static void InvokeMember(void *instance, const unsigned char *method, Args... args) {
-        using Method = void (T::*)(Args...);
-        Method m = nullptr;
-        std::memcpy(&m, method, sizeof(Method));
-        (static_cast<T *>(instance)->*m)(args...);
-    }
+    bool Subscribe(const EEventOwner &owner, T *instance, void (T::*method)(Args...)) {
+        if(Exists(owner))
+            return false;
 
-    template<typename T>
-    static void InvokeConstMember(void *instance, const unsigned char *method, Args... args) {
-        using Method = void (T::*)(Args...) const;
-        Method m = nullptr;
-        std::memcpy(&m, method, sizeof(Method));
-        (static_cast<T *>(instance)->*m)(args...);
-    }
-
-    bool AddSlot(void *instance, InvokeFn invoke, const void *method, size_t methodSize) {
-        for (size_t i = 0; i < MaxSubscribers; ++i) {
-            if (_slots[i].instance == instance &&
-                _slots[i].invoke == invoke &&
-                std::memcmp(_slots[i].method, method, methodSize) == 0) {
+        for(int idx = 0; idx < MaxSize; idx++) {
+            if(_callbacks[idx] == nullptr) {
+                _callbacks[idx] = new Callback<T, Args...>(owner, instance, method);
                 return true;
             }
         }
-        for (size_t i = 0; i < MaxSubscribers; ++i) {
-            if (!_slots[i].invoke) {
-                _slots[i].instance = instance;
-                _slots[i].invoke = invoke;
-                std::memset(_slots[i].method, 0, sizeof(_slots[i].method));
-                std::memcpy(_slots[i].method, method, methodSize);
-                return true;
-            }
-        }
+
         return false;
     }
 
-    void RemoveSlot(void *instance, InvokeFn invoke, const void *method, size_t methodSize) {
-        for (size_t i = 0; i < MaxSubscribers; ++i) {
-            if (_slots[i].instance == instance &&
-                _slots[i].invoke == invoke &&
-                std::memcmp(_slots[i].method, method, methodSize) == 0) {
-                _slots[i].instance = nullptr;
-                _slots[i].invoke = nullptr;
-                std::memset(_slots[i].method, 0, sizeof(_slots[i].method));
+    /**
+     * @brief Unsubscribe to a given event
+     * @param eventId The event ID to unsubscribe
+     */
+    void Unsubscribe(int eventId) {
+        if(eventId < 0 || eventId >= MaxSize)
+            return;
+
+        delete _callbacks[eventId];
+        _callbacks[eventId] = nullptr;
+    }
+
+    /**
+     * @brief Unsubscribe using the owner identifier
+     * @param owner The event owner
+     */
+    void Unsubscribe(const EEventOwner &owner) {
+        for(auto &callback: _callbacks) {
+            if(callback != nullptr && callback->Owner == owner) {
+                delete callback;
+                callback = nullptr;
             }
         }
     }
 
-    Slot _slots[MaxSubscribers]{};
+    /**
+     * @brief Trigger all callbacks for this event
+     * @param args The arguments to pass to the callbacks
+     */
+    void Emit(Args... args) {
+        for(const auto &callback: _callbacks) {
+            if(callback != nullptr)
+                callback->Invoke(args...);
+        }
+    }
+
+    static std::shared_ptr<Event<MaxSize, Args...>> Make() {
+        return std::make_shared<Event<MaxSize, Args...>>();
+    }
+
+private:
+    ICallbackBase<Args...> *_callbacks[MaxSize] = {};
+
+    bool Exists(const EEventOwner &owner) const {
+        for(const auto &callback: _callbacks) {
+            if(callback != nullptr && callback->Owner == owner)
+                return true;
+        }
+        return false;
+    }
 };
 
 #endif // EVENT_H

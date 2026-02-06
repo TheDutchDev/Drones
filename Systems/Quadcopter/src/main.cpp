@@ -17,7 +17,7 @@ int main() {
     RegisterServices();
 
     LOG_FATAL("Start");
-    auto data = container->Resolve<DataModule>();
+    auto data = dynamic_pointer_cast<DataModule>(container->Resolve<IDataModule>());
     data->MotorTask1 = StartMotorTask(data->Motor1, "Motor1");
     data->MotorTask2 = StartMotorTask(data->Motor2, "Motor2");
     data->MotorTask3 = StartMotorTask(data->Motor3, "Motor3");
@@ -33,7 +33,7 @@ int main() {
 
 void RegisterServices() {
     container->RegisterTransientClass<IMotorData>();
-    container->RegisterSingletonClass<DataModule, IMotorData, IMotorData, IMotorData, IMotorData>();
+    container->RegisterSingletonWithInterface<IDataModule, DataModule, IMotorData, IMotorData, IMotorData, IMotorData>();
     container->RegisterSingletonWithInterface<IPwmProvider, HalPwmProviderAdapter>();
     container->RegisterTransientWithInterface<IMotor, RS2205BLDCMotor, IMotorData, IPwmProvider>();
 }

@@ -30,8 +30,8 @@ static bool MotorTask(void *userContext) {
     motor->Arm();
 
     for (;;) {
-        const float maxRpm = ctx->Data->MaxRpm.Get();
-        const float targetRpm = ctx->Data->TargetRpm.Get();
+        const float maxRpm = ctx->Data->MaxRpm.Value();
+        const float targetRpm = ctx->Data->TargetRpm.Value();
         const float throttle = (maxRpm > 0.0f) ? (targetRpm / maxRpm) : 0.0f;
         motor->SetThrottle(throttle);
         TaskFactory::DelayMs(5);

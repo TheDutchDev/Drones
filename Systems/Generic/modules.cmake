@@ -30,8 +30,8 @@ function(add_events target_name)
     add_interface(Events interface_events ${target_name} PUBLIC)
 endfunction()
 
-function(add_properties target_name)
-    add_interface(Properties interface_properties ${target_name} PUBLIC)
+function(add_data target_name)
+    add_interface(Data interface_data ${target_name} PUBLIC)
 endfunction()
 
 function(add_rs2205_bldc target_name)

@@ -31,7 +31,6 @@ file(GLOB_RECURSE C_SOURCES
 target_sources(firmware PUBLIC ${C_SOURCES})
 
 add_events(firmware)
-add_properties(firmware)
 add_motors(firmware FALSE)
 add_rs2205_bldc(firmware)
 add_di(firmware TRUE)

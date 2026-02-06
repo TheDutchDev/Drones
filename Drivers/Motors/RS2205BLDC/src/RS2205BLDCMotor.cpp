@@ -19,9 +19,8 @@ RS2205BLDCMotor::RS2205BLDCMotor(std::shared_ptr<IMotorData> data,
                                  float minDuty, float maxDuty, float disarmedDuty)
     : Data(std::move(data)),
       PwmProvider(std::move(pwmProvider)) {
-    if (PwmProvider && Data) {
-        Pwm = PwmProvider->Create(Data->PwmConfig.Get());
-    }
+
+    // Pwm = PwmProvider->Create(Data->PwmConfig.Get());
     Configure(minDuty, maxDuty, disarmedDuty);
     SubscribeToData(Data.get());
 }
@@ -71,45 +70,22 @@ void RS2205BLDCMotor::ApplyTarget() {
 }
 
 void RS2205BLDCMotor::SubscribeToData(IMotorData *data) {
-    if (!data) {
-        return;
-    }
+    // PwmConfigValue = data->PwmConfig.Get();
+    TargetRpm = data->TargetRpm.Value();
+    MaxRpm = data->MaxRpm.Value();
 
-    PwmConfigProperty = &data->PwmConfig;
-    TargetProperty = &data->TargetRpm;
-    MaxRpmProperty = &data->MaxRpm;
-
-    PwmConfigValue = data->PwmConfig.Get();
-    TargetRpm = data->TargetRpm.Get();
-    MaxRpm = data->MaxRpm.Get();
-
-    data->PwmConfig.OnModified().Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
-    data->TargetRpm.OnModified().Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
-    data->MaxRpm.OnModified().Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    // data->PwmConfig.OnModified().Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    data->TargetRpm.OnModified->Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    data->MaxRpm.OnModified->Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
 }
 
 void RS2205BLDCMotor::UnsubscribeFromData() {
-    if (!Data) {
-        return;
-    }
-    Data->PwmConfig.OnModified().Unsubscribe(this, &RS2205BLDCMotor::OnPropertyModified);
-    Data->TargetRpm.OnModified().Unsubscribe(this, &RS2205BLDCMotor::OnPropertyModified);
-    Data->MaxRpm.OnModified().Unsubscribe(this, &RS2205BLDCMotor::OnPropertyModified);
-    Data.reset();
-    PwmConfigProperty = nullptr;
-    TargetProperty = nullptr;
-    MaxRpmProperty = nullptr;
+
+    // Data->PwmConfig.OnModified().Unsubscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    // Data->TargetRpm.OnModified->Unsubscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    // Data->MaxRpm.OnModified().Unsubscribe(this, &RS2205BLDCMotor::OnPropertyModified);
 }
 
-void RS2205BLDCMotor::OnPropertyModified(IProperty *property) {
-    if (!Data) {
-        return;
-    }
-    if (property == PwmConfigProperty) {
-        PwmConfigValue = Data->PwmConfig.Get();
-    } else if (property == TargetProperty) {
-        TargetRpm = Data->TargetRpm.Get();
-    } else if (property == MaxRpmProperty) {
-        MaxRpm = Data->MaxRpm.Get();
-    }
+void RS2205BLDCMotor::OnPropertyModified(IPropertyBase *property) {
+
 }

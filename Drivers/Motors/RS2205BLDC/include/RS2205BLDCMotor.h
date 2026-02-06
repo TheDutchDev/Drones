@@ -7,6 +7,7 @@
 #include "IMotor.h"
 #include "IMotorData.h"
 #include "IProperty.h"
+#include "PwmConfig.h"
 #include "PwmOutput.h"
 
 class IPwmProvider;
@@ -33,14 +34,11 @@ private:
     void WriteDuty(float duty);
     void SubscribeToData(IMotorData *data);
     void UnsubscribeFromData();
-    void OnPropertyModified(IProperty *property);
+    void OnPropertyModified(IPropertyBase *propertyBase);
 
     PwmOutput Pwm{};
     std::shared_ptr<IMotorData> Data{};
     std::shared_ptr<IPwmProvider> PwmProvider{};
-    IProperty *PwmConfigProperty = nullptr;
-    IProperty *TargetProperty = nullptr;
-    IProperty *MaxRpmProperty = nullptr;
     HalPwmConfig PwmConfigValue{};
     float TargetRpm = 0.0f;
     float MaxRpm = 0.0f;
