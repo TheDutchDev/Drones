@@ -6,15 +6,15 @@ struct PwmContext {
     uint32_t channel = 0;
 };
 
-static TIM_HandleTypeDef Tim1{};
-static PwmContext Tim1Context[4]{};
-static bool Tim1Initialized = false;
-static uint32_t Tim1Frequency = 0;
+struct TimerState {
+    TIM_HandleTypeDef timer{};
+    PwmContext contexts[4]{};
+    bool initialized = false;
+    uint32_t frequency = 0;
+};
 
-static TIM_HandleTypeDef Tim3{};
-static PwmContext Tim3Context[4]{};
-static bool Tim3Initialized = false;
-static uint32_t Tim3Frequency = 0;
+static TimerState Tim1State{};
+static TimerState Tim3State{};
 
 static GPIO_TypeDef *ResolvePort(HalPort port) {
     switch (port) {
@@ -54,104 +54,40 @@ static uint16_t ResolvePinMask(uint8_t pin) {
     return static_cast<uint16_t>(1u << pin);
 }
 
-static uint32_t TimerClockForTim1() {
-    const uint32_t pclk = HAL_RCC_GetPCLK2Freq();
-    const bool apb_div1 = ((RCC->CFGR & RCC_CFGR_PPRE2) == RCC_CFGR_PPRE2_DIV1);
-    return apb_div1 ? pclk : (pclk * 2u);
-}
-
-static uint32_t TimerClockForTim3() {
-    const uint32_t pclk = HAL_RCC_GetPCLK1Freq();
-    const bool apb_div1 = ((RCC->CFGR & RCC_CFGR_PPRE1) == RCC_CFGR_PPRE1_DIV1);
-    return apb_div1 ? pclk : (pclk * 2u);
-}
-
-static bool ConfigureTim1(const HalPwmConfig &cfg, PwmContext &ctx) {
-    if (cfg.timer != HalTimer::Tim1) {
-        return false;
-    }
-
-    const uint32_t channel = ResolveChannel(cfg.channel);
-    if (channel == 0) {
-        return false;
-    }
-
-    GPIO_TypeDef *gpio = ResolvePort(cfg.pin.port);
-    if (!gpio) {
-        return false;
-    }
-
-    switch (cfg.pin.port) {
+static bool EnableGpioClock(HalPort port) {
+    switch (port) {
         case HalPort::A:
             __HAL_RCC_GPIOA_CLK_ENABLE();
-            break;
+            return true;
         case HalPort::B:
             __HAL_RCC_GPIOB_CLK_ENABLE();
-            break;
+            return true;
         case HalPort::C:
             __HAL_RCC_GPIOC_CLK_ENABLE();
-            break;
+            return true;
         case HalPort::D:
             __HAL_RCC_GPIOD_CLK_ENABLE();
-            break;
+            return true;
         case HalPort::E:
             __HAL_RCC_GPIOE_CLK_ENABLE();
-            break;
+            return true;
         case HalPort::H:
             __HAL_RCC_GPIOH_CLK_ENABLE();
-            break;
+            return true;
         default:
             return false;
     }
-    __HAL_RCC_TIM1_CLK_ENABLE();
+}
 
-    GPIO_InitTypeDef gpioInit{};
-    gpioInit.Pin = ResolvePinMask(cfg.pin.pin);
-    gpioInit.Mode = GPIO_MODE_AF_PP;
-    gpioInit.Pull = GPIO_NOPULL;
-    gpioInit.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    gpioInit.Alternate = GPIO_AF1_TIM1;
-    HAL_GPIO_Init(gpio, &gpioInit);
-
-    if (Tim1Initialized && Tim1Frequency != cfg.frequencyHz) {
-        return false;
+static uint32_t TimerClockFor(HalTimer timer) {
+    if (timer == HalTimer::Tim1) {
+        const uint32_t pclk = HAL_RCC_GetPCLK2Freq();
+        const bool apb_div1 = ((RCC->CFGR & RCC_CFGR_PPRE2) == RCC_CFGR_PPRE2_DIV1);
+        return apb_div1 ? pclk : (pclk * 2u);
     }
-    if (!Tim1Initialized) {
-        const uint32_t timer_clk = TimerClockForTim1();
-        const uint32_t target_clk = 1000000u;
-        const uint32_t prescaler = (timer_clk / target_clk) - 1u;
-        const uint32_t period = (target_clk / cfg.frequencyHz) - 1u;
-
-        Tim1.Instance = TIM1;
-        Tim1.Init.Prescaler = prescaler;
-        Tim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-        Tim1.Init.Period = period;
-        Tim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-        Tim1.Init.RepetitionCounter = 0;
-        Tim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-        if (HAL_TIM_PWM_Init(&Tim1) != HAL_OK) {
-            return false;
-        }
-        Tim1Initialized = true;
-        Tim1Frequency = cfg.frequencyHz;
-    }
-
-    TIM_OC_InitTypeDef ocInit{};
-    ocInit.OCMode = TIM_OCMODE_PWM1;
-    ocInit.Pulse = 0;
-    ocInit.OCPolarity = TIM_OCPOLARITY_HIGH;
-    ocInit.OCFastMode = TIM_OCFAST_DISABLE;
-    if (HAL_TIM_PWM_ConfigChannel(&Tim1, &ocInit, channel) != HAL_OK) {
-        return false;
-    }
-
-    if (HAL_TIM_PWM_Start(&Tim1, channel) != HAL_OK) {
-        return false;
-    }
-
-    ctx.timer = &Tim1;
-    ctx.channel = channel;
-    return true;
+    const uint32_t pclk = HAL_RCC_GetPCLK1Freq();
+    const bool apb_div1 = ((RCC->CFGR & RCC_CFGR_PPRE1) == RCC_CFGR_PPRE1_DIV1);
+    return apb_div1 ? pclk : (pclk * 2u);
 }
 
 static bool IsTim3PinValid(HalTimerChannel channel, const HalPin &pin, uint32_t &alternate) {
@@ -173,18 +109,13 @@ static bool IsTim3PinValid(HalTimerChannel channel, const HalPin &pin, uint32_t 
     return false;
 }
 
-static bool ConfigureTim3(const HalPwmConfig &cfg, PwmContext &ctx) {
-    if (cfg.timer != HalTimer::Tim3) {
-        return false;
-    }
-
+static bool ConfigureTimer(const HalPwmConfig &cfg,
+                           TimerState &state,
+                           TIM_TypeDef *instance,
+                           uint32_t alternate,
+                           PwmContext &ctx) {
     const uint32_t channel = ResolveChannel(cfg.channel);
     if (channel == 0) {
-        return false;
-    }
-
-    uint32_t alternate = 0;
-    if (!IsTim3PinValid(cfg.channel, cfg.pin, alternate)) {
         return false;
     }
 
@@ -192,31 +123,9 @@ static bool ConfigureTim3(const HalPwmConfig &cfg, PwmContext &ctx) {
     if (!gpio) {
         return false;
     }
-
-    switch (cfg.pin.port) {
-        case HalPort::A:
-            __HAL_RCC_GPIOA_CLK_ENABLE();
-            break;
-        case HalPort::B:
-            __HAL_RCC_GPIOB_CLK_ENABLE();
-            break;
-        case HalPort::C:
-            __HAL_RCC_GPIOC_CLK_ENABLE();
-            break;
-        case HalPort::D:
-            __HAL_RCC_GPIOD_CLK_ENABLE();
-            break;
-        case HalPort::E:
-            __HAL_RCC_GPIOE_CLK_ENABLE();
-            break;
-        case HalPort::H:
-            __HAL_RCC_GPIOH_CLK_ENABLE();
-            break;
-        default:
-            return false;
+    if (!EnableGpioClock(cfg.pin.port)) {
+        return false;
     }
-
-    __HAL_RCC_TIM3_CLK_ENABLE();
 
     GPIO_InitTypeDef gpioInit{};
     gpioInit.Pin = ResolvePinMask(cfg.pin.pin);
@@ -226,26 +135,27 @@ static bool ConfigureTim3(const HalPwmConfig &cfg, PwmContext &ctx) {
     gpioInit.Alternate = alternate;
     HAL_GPIO_Init(gpio, &gpioInit);
 
-    if (Tim3Initialized && Tim3Frequency != cfg.frequencyHz) {
+    if (state.initialized && state.frequency != cfg.frequencyHz) {
         return false;
     }
-    if (!Tim3Initialized) {
-        const uint32_t timer_clk = TimerClockForTim3();
+    if (!state.initialized) {
+        const uint32_t timer_clk = TimerClockFor(cfg.timer);
         const uint32_t target_clk = 1000000u;
         const uint32_t prescaler = (timer_clk / target_clk) - 1u;
         const uint32_t period = (target_clk / cfg.frequencyHz) - 1u;
 
-        Tim3.Instance = TIM3;
-        Tim3.Init.Prescaler = prescaler;
-        Tim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-        Tim3.Init.Period = period;
-        Tim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-        Tim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-        if (HAL_TIM_PWM_Init(&Tim3) != HAL_OK) {
+        state.timer.Instance = instance;
+        state.timer.Init.Prescaler = prescaler;
+        state.timer.Init.CounterMode = TIM_COUNTERMODE_UP;
+        state.timer.Init.Period = period;
+        state.timer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+        state.timer.Init.RepetitionCounter = 0;
+        state.timer.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+        if (HAL_TIM_PWM_Init(&state.timer) != HAL_OK) {
             return false;
         }
-        Tim3Initialized = true;
-        Tim3Frequency = cfg.frequencyHz;
+        state.initialized = true;
+        state.frequency = cfg.frequencyHz;
     }
 
     TIM_OC_InitTypeDef ocInit{};
@@ -253,15 +163,15 @@ static bool ConfigureTim3(const HalPwmConfig &cfg, PwmContext &ctx) {
     ocInit.Pulse = 0;
     ocInit.OCPolarity = TIM_OCPOLARITY_HIGH;
     ocInit.OCFastMode = TIM_OCFAST_DISABLE;
-    if (HAL_TIM_PWM_ConfigChannel(&Tim3, &ocInit, channel) != HAL_OK) {
+    if (HAL_TIM_PWM_ConfigChannel(&state.timer, &ocInit, channel) != HAL_OK) {
         return false;
     }
 
-    if (HAL_TIM_PWM_Start(&Tim3, channel) != HAL_OK) {
+    if (HAL_TIM_PWM_Start(&state.timer, channel) != HAL_OK) {
         return false;
     }
 
-    ctx.timer = &Tim3;
+    ctx.timer = &state.timer;
     ctx.channel = channel;
     return true;
 }
@@ -291,21 +201,26 @@ public:
             return output;
         }
 
-        bool configured = false;
         if (config.timer == HalTimer::Tim1) {
-            configured = ConfigureTim1(config, Tim1Context[index]);
+            __HAL_RCC_TIM1_CLK_ENABLE();
+            if (!ConfigureTimer(config, Tim1State, TIM1, GPIO_AF1_TIM1, Tim1State.contexts[index])) {
+                return output;
+            }
+            output.context = &Tim1State.contexts[index];
         } else if (config.timer == HalTimer::Tim3) {
-            configured = ConfigureTim3(config, Tim3Context[index]);
-        }
-        if (!configured) {
+            uint32_t alternate = 0;
+            if (!IsTim3PinValid(config.channel, config.pin, alternate)) {
+                return output;
+            }
+            __HAL_RCC_TIM3_CLK_ENABLE();
+            if (!ConfigureTimer(config, Tim3State, TIM3, alternate, Tim3State.contexts[index])) {
+                return output;
+            }
+            output.context = &Tim3State.contexts[index];
+        } else {
             return output;
         }
 
-        if (config.timer == HalTimer::Tim1) {
-            output.context = &Tim1Context[index];
-        } else {
-            output.context = &Tim3Context[index];
-        }
         output.SetDuty = &SetDuty;
         return output;
     }
