@@ -1,5 +1,7 @@
 #include "SerialLogger.h"
 #include "LogEntry.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #include <cstring>
 
 static constexpr size_t LogQueueSize = 8;
@@ -109,6 +111,10 @@ void SerialLogger::Log(const ELogLevel level, const char *file, const int line, 
     char lineBuf[LogBufferSize];
     const uint16_t totalLen = BuildLogLine(lineBuf, sizeof(lineBuf), levelStr, file, line, message);
     if (totalLen == 0) {
+        return;
+    }
+    if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
+        HAL_UART_Transmit(_huart, (uint8_t *)lineBuf, totalLen, HAL_MAX_DELAY);
         return;
     }
     if (!EnqueueLog(lineBuf, totalLen)) {
