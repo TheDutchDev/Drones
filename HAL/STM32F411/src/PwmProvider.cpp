@@ -16,34 +16,34 @@ struct TimerState {
 static TimerState Tim1State{};
 static TimerState Tim3State{};
 
-static GPIO_TypeDef *ResolvePort(HalPort port) {
+static GPIO_TypeDef *ResolvePort(EHalPort port) {
     switch (port) {
-        case HalPort::A:
+        case EHalPort::A:
             return GPIOA;
-        case HalPort::B:
+        case EHalPort::B:
             return GPIOB;
-        case HalPort::C:
+        case EHalPort::C:
             return GPIOC;
-        case HalPort::D:
+        case EHalPort::D:
             return GPIOD;
-        case HalPort::E:
+        case EHalPort::E:
             return GPIOE;
-        case HalPort::H:
+        case EHalPort::H:
             return GPIOH;
         default:
             return nullptr;
     }
 }
 
-static uint32_t ResolveChannel(HalTimerChannel channel) {
+static uint32_t ResolveChannel(EHalTimerChannel channel) {
     switch (channel) {
-        case HalTimerChannel::Ch1:
+        case EHalTimerChannel::Ch1:
             return TIM_CHANNEL_1;
-        case HalTimerChannel::Ch2:
+        case EHalTimerChannel::Ch2:
             return TIM_CHANNEL_2;
-        case HalTimerChannel::Ch3:
+        case EHalTimerChannel::Ch3:
             return TIM_CHANNEL_3;
-        case HalTimerChannel::Ch4:
+        case EHalTimerChannel::Ch4:
             return TIM_CHANNEL_4;
         default:
             return 0;
@@ -54,24 +54,24 @@ static uint16_t ResolvePinMask(uint8_t pin) {
     return static_cast<uint16_t>(1u << pin);
 }
 
-static bool EnableGpioClock(HalPort port) {
+static bool EnableGpioClock(EHalPort port) {
     switch (port) {
-        case HalPort::A:
+        case EHalPort::A:
             __HAL_RCC_GPIOA_CLK_ENABLE();
             return true;
-        case HalPort::B:
+        case EHalPort::B:
             __HAL_RCC_GPIOB_CLK_ENABLE();
             return true;
-        case HalPort::C:
+        case EHalPort::C:
             __HAL_RCC_GPIOC_CLK_ENABLE();
             return true;
-        case HalPort::D:
+        case EHalPort::D:
             __HAL_RCC_GPIOD_CLK_ENABLE();
             return true;
-        case HalPort::E:
+        case EHalPort::E:
             __HAL_RCC_GPIOE_CLK_ENABLE();
             return true;
-        case HalPort::H:
+        case EHalPort::H:
             __HAL_RCC_GPIOH_CLK_ENABLE();
             return true;
         default:
@@ -79,8 +79,8 @@ static bool EnableGpioClock(HalPort port) {
     }
 }
 
-static uint32_t TimerClockFor(HalTimer timer) {
-    if (timer == HalTimer::Tim1) {
+static uint32_t TimerClockFor(EHalTimer timer) {
+    if (timer == EHalTimer::Tim1) {
         const uint32_t pclk = HAL_RCC_GetPCLK2Freq();
         const bool apb_div1 = ((RCC->CFGR & RCC_CFGR_PPRE2) == RCC_CFGR_PPRE2_DIV1);
         return apb_div1 ? pclk : (pclk * 2u);
@@ -90,26 +90,26 @@ static uint32_t TimerClockFor(HalTimer timer) {
     return apb_div1 ? pclk : (pclk * 2u);
 }
 
-static bool IsTim3PinValid(HalTimerChannel channel, const HalPin &pin, uint32_t &alternate) {
+static bool IsTim3PinValid(EHalTimerChannel channel, const HalPin &pin, uint32_t &alternate) {
     alternate = GPIO_AF2_TIM3;
-    if (channel == HalTimerChannel::Ch1) {
-        return (pin.port == HalPort::A && pin.pin == 6) ||
-               (pin.port == HalPort::B && pin.pin == 4);
+    if (channel == EHalTimerChannel::Ch1) {
+        return (pin.port == EHalPort::A && pin.pin == 6) ||
+               (pin.port == EHalPort::B && pin.pin == 4);
     }
-    if (channel == HalTimerChannel::Ch2) {
-        return (pin.port == HalPort::A && pin.pin == 7) ||
-               (pin.port == HalPort::B && pin.pin == 5);
+    if (channel == EHalTimerChannel::Ch2) {
+        return (pin.port == EHalPort::A && pin.pin == 7) ||
+               (pin.port == EHalPort::B && pin.pin == 5);
     }
-    if (channel == HalTimerChannel::Ch3) {
-        return (pin.port == HalPort::B && pin.pin == 0);
+    if (channel == EHalTimerChannel::Ch3) {
+        return (pin.port == EHalPort::B && pin.pin == 0);
     }
-    if (channel == HalTimerChannel::Ch4) {
-        return (pin.port == HalPort::B && pin.pin == 1);
+    if (channel == EHalTimerChannel::Ch4) {
+        return (pin.port == EHalPort::B && pin.pin == 1);
     }
     return false;
 }
 
-static bool ConfigureTimer(const HalPwmConfig &cfg,
+static bool ConfigureTimer(const PwmConfig &cfg,
                            TimerState &state,
                            TIM_TypeDef *instance,
                            uint32_t alternate,
@@ -194,20 +194,20 @@ static void SetDuty(void *context, float duty) {
 
 class Stm32PwmProvider final : public IPwmProvider {
 public:
-    PwmOutput Create(const HalPwmConfig &config) override {
+    PwmOutput Create(const PwmConfig &config) override {
         PwmOutput output{};
         const uint8_t index = static_cast<uint8_t>(config.channel);
         if (index >= 4) {
             return output;
         }
 
-        if (config.timer == HalTimer::Tim1) {
+        if (config.timer == EHalTimer::Tim1) {
             __HAL_RCC_TIM1_CLK_ENABLE();
             if (!ConfigureTimer(config, Tim1State, TIM1, GPIO_AF1_TIM1, Tim1State.contexts[index])) {
                 return output;
             }
             output.context = &Tim1State.contexts[index];
-        } else if (config.timer == HalTimer::Tim3) {
+        } else if (config.timer == EHalTimer::Tim3) {
             uint32_t alternate = 0;
             if (!IsTim3PinValid(config.channel, config.pin, alternate)) {
                 return output;

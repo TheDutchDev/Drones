@@ -3,17 +3,11 @@
 
 #include <cstdint>
 
-enum class HalPort : uint8_t {
-    A,
-    B,
-    C,
-    D,
-    E,
-    H,
-};
+#include "EHalPort.h"
+
 
 struct HalPin {
-    HalPort port = HalPort::A;
+    EHalPort port = EHalPort::A;
     uint8_t pin = 0;
 };
 

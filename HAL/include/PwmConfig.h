@@ -1,32 +1,20 @@
 #ifndef PWMCONFIG_H
 #define PWMCONFIG_H
 
-#include "HalGpio.h"
+#include "HalPin.h"
 #include <cstdint>
+#include "EHalTimer.h"
+#include "EHalTimerChannel.h"
 
-enum class HalTimer : uint8_t {
-    Tim1,
-    Tim2,
-    Tim3,
-    Tim4,
-    Tim5,
-};
 
-enum class HalTimerChannel : uint8_t {
-    Ch1,
-    Ch2,
-    Ch3,
-    Ch4,
-};
-
-struct HalPwmConfig {
-    HalTimer timer = HalTimer::Tim1;
-    HalTimerChannel channel = HalTimerChannel::Ch1;
+struct PwmConfig {
+    EHalTimer timer = EHalTimer::Tim1;
+    EHalTimerChannel channel = EHalTimerChannel::Ch1;
     HalPin pin{};
     uint32_t frequencyHz = 50;
 };
 
-inline bool operator==(const HalPwmConfig &lhs, const HalPwmConfig &rhs) {
+inline bool operator==(const PwmConfig &lhs, const PwmConfig &rhs) {
     return lhs.timer == rhs.timer &&
            lhs.channel == rhs.channel &&
            lhs.pin.port == rhs.pin.port &&

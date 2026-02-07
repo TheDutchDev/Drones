@@ -4,15 +4,6 @@
 
 #include "IPwmProvider.h"
 
-static float Clamp01(float value) {
-    if (value < 0.0f) {
-        return 0.0f;
-    }
-    if (value > 1.0f) {
-        return 1.0f;
-    }
-    return value;
-}
 
 RS2205BLDCMotor::RS2205BLDCMotor(std::shared_ptr<IMotorData> data,
                                  std::shared_ptr<IPwmProvider> pwmProvider,
@@ -49,7 +40,7 @@ void RS2205BLDCMotor::SetThrottle(float normalized) {
     if (!Armed) {
         return;
     }
-    const float clamped = Clamp01(normalized);
+    const float clamped = std::clamp(normalized, 0.0f, 1.0f);
     const float duty = MinDuty + ((MaxDuty - MinDuty) * clamped);
     WriteDuty(duty);
 }

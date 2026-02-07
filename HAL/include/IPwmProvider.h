@@ -7,7 +7,7 @@
 class IPwmProvider {
 public:
     virtual ~IPwmProvider() = default;
-    virtual PwmOutput Create(const HalPwmConfig &config) = 0;
+    virtual PwmOutput Create(const PwmConfig &config) = 0;
 };
 
 IPwmProvider *GetPwmProvider();

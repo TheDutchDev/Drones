@@ -39,7 +39,7 @@ private:
     PwmOutput Pwm{};
     std::shared_ptr<IMotorData> Data{};
     std::shared_ptr<IPwmProvider> PwmProvider{};
-    HalPwmConfig PwmConfigValue{};
+    PwmConfig PwmConfigValue{};
     float TargetRpm = 0.0f;
     float MaxRpm = 0.0f;
     float MinDuty = 0.05f;

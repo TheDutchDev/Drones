@@ -5,7 +5,7 @@
 
 class HalPwmProviderAdapter final : public IPwmProvider {
 public:
-    PwmOutput Create(const HalPwmConfig &config) override {
+    PwmOutput Create(const PwmConfig &config) override {
         auto *provider = GetPwmProvider();
         return provider ? provider->Create(config) : PwmOutput{};
     }
