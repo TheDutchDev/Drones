@@ -7,45 +7,20 @@
 #include "IMotor.h"
 #include "IMotorData.h"
 #include "IProperty.h"
-#include "PwmConfig.h"
-#include "PwmOutput.h"
 
-class IPwmProvider;
-
-class RS2205BLDCMotor final : public IMotor {
+class RS2205BLDCMotor : public IMotor {
 public:
-    RS2205BLDCMotor() = default;
-    explicit RS2205BLDCMotor(std::shared_ptr<IMotorData> data,
-                             std::shared_ptr<IPwmProvider> pwmProvider,
-                             float minDuty = 0.05f, float maxDuty = 0.10f, float disarmedDuty = 0.0f);
-
-    void Configure(float minDuty = 0.05f, float maxDuty = 0.10f,
-                   float disarmedDuty = 0.0f) override;
-
+    explicit RS2205BLDCMotor(
+        const std::shared_ptr<IMotorData>& motorData
+    );
+    ~RS2205BLDCMotor();
     void Initialize() override;
-    void Arm() override;
-    void Disarm() override;
-    void SetThrottle(float normalized) override;
-    bool IsArmed() const override;
-
-    void ApplyTarget();
+    void Update() override;
 
 private:
-    void WriteDuty(float duty);
-    void SubscribeToData(IMotorData *data);
-    void UnsubscribeFromData();
     void OnPropertyModified(IPropertyBase *propertyBase);
-
-    PwmOutput Pwm{};
-    std::shared_ptr<IMotorData> Data{};
-    std::shared_ptr<IPwmProvider> PwmProvider{};
-    PwmConfig PwmConfigValue{};
-    float TargetRpm = 0.0f;
-    float MaxRpm = 0.0f;
-    float MinDuty = 0.05f;
-    float MaxDuty = 0.10f;
-    float DisarmedDuty = 0.0f;
-    bool Armed = false;
+    std::shared_ptr<IMotorData> _motorData;
+    int _motorDataEventHandle {-1};
 };
 
 #endif // RS2205BLDCMOTOR_H

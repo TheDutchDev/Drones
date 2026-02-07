@@ -5,8 +5,11 @@
 
 enum class EPropertyType : uint32_t {
     Unknown,
-    MaxRpm,
-    TargetRpm
+    MotorMaxRpm,
+    MotorTargetRpm,
+    MotorMinDuty,
+    MotorMaxDuty,
+    MotorDisarmedDuty
 };
 
 #endif //EPROPERTYTYPE_H

@@ -5,8 +5,8 @@
 #include "ISystem.h"
 #include "MotorTask.h"
 #include "Os.h"
-#include "PwmProviderAdapter.h"
 #include "RS2205BLDCMotor.h"
+
 void RegisterServices();
 
 int main() {
@@ -33,6 +33,5 @@ int main() {
 void RegisterServices() {
     container->RegisterTransientClass<IMotorData>();
     container->RegisterSingletonWithInterface<IDataModule, DataModule, IMotorData, IMotorData, IMotorData, IMotorData>();
-    container->RegisterSingletonWithInterface<IPwmProvider, HalPwmProviderAdapter>();
-    container->RegisterTransientWithInterface<IMotor, RS2205BLDCMotor, IMotorData, IPwmProvider>();
+    container->RegisterTransientWithInterface<IMotor, RS2205BLDCMotor, IMotorData>();
 }

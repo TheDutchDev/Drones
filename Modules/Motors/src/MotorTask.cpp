@@ -11,43 +11,27 @@ static constexpr uint32_t MotorTaskStackWords = 512;
 static constexpr UBaseType_t MotorTaskPriority = tskIDLE_PRIORITY + 2;
 
 struct MotorTaskContext {
-    std::shared_ptr<IMotorData> Data{};
+    std::shared_ptr<IMotorData> MotorData;
 };
 
 static bool MotorTask(void *userContext) {
-    auto *ctx = static_cast<MotorTaskContext *>(userContext);
-    if (!ctx || !ctx->Data || !container) {
-        return false;
-    }
+    auto *parameters = static_cast<MotorTaskContext *>(userContext);
 
-    auto motor = container->Resolve<IMotor>(ctx->Data);
-    if (!motor) {
-        return false;
-    }
+    auto motor = container->Resolve<IMotor>(parameters->MotorData);
 
-    motor->Configure(0.05f, 0.10f, 0.0f);
     motor->Initialize();
-    motor->Arm();
 
     for (;;) {
-        const float maxRpm = ctx->Data->MaxRpm.Value();
-        const float targetRpm = ctx->Data->TargetRpm.Value();
-        const float throttle = (maxRpm > 0.0f) ? (targetRpm / maxRpm) : 0.0f;
-        motor->SetThrottle(throttle);
+        motor->Update();
         TaskFactory::DelayMs(5);
     }
 
     return true;
 }
 
-TaskInstance *StartMotorTask(std::shared_ptr<IMotorData> data,
-                             const char *name) {
-    if (!data) {
-        return nullptr;
-    }
-
+TaskInstance *StartMotorTask(std::shared_ptr<IMotorData> data, const char *name) {
     auto *context = new MotorTaskContext{};
-    context->Data = std::move(data);
+    context->MotorData = std::move(data);
 
     return TaskFactory::Run(MotorTask, context, MotorTaskStackWords, MotorTaskPriority, name);
 }
