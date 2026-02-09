@@ -29,4 +29,28 @@ public:
     bool PwmConfigured = false;
 };
 
+class IMoreMotorData : public IMotorData {
+
+public:
+    IMoreMotorData() {
+        RegisterProperty(MaxRpm2);
+
+        IDataModel::HookDataModels();
+    }
+
+    IFloatProperty MaxRpm2 = IFloatProperty(100, 0, 100, EPropertyType::MotorMaxRpm);
+};
+
+class IThirdMotorData : public IMoreMotorData {
+
+public:
+    IThirdMotorData() {
+        RegisterProperty(MaxRpm3);
+
+        IDataModel::HookDataModels();
+    }
+
+    IFloatProperty MaxRpm3 = IFloatProperty(100, 0, 100, EPropertyType::MotorMaxRpm);
+};
+
 #endif // IMOTORDATA_H

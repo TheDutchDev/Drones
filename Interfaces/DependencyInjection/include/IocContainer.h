@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
+#include <type_traits>
 #include <typeinfo>
 #include <unordered_map>
 #include <vector>
@@ -112,6 +113,43 @@ public:
     }
 
     /**
+     * @brief Register a base interface that resolves to an existing derived service
+     * @tparam PrimaryInterface The derived interface already registered in the container
+     * @tparam AdditionalInterface A base interface that should resolve to the same instance
+     */
+    template<typename PrimaryInterface, typename AdditionalInterface>
+    void RegisterAdditional() {
+        static_assert(
+            std::is_base_of<AdditionalInterface, PrimaryInterface>::value,
+            "RegisterAdditional requires AdditionalInterface to be a base of PrimaryInterface"
+        );
+
+        auto primaryType = ResolveAliasType(TypeId<PrimaryInterface>());
+        auto primaryIt = _serviceRegistry.find(primaryType);
+        if (primaryIt == _serviceRegistry.end()) {
+            throw std::runtime_error("Type " + std::string(typeid(PrimaryInterface).name()) + " not registered in IoC container");
+        }
+
+        auto additionalType = TypeId<AdditionalInterface>();
+        if (_serviceRegistry.find(additionalType) != _serviceRegistry.end()) {
+            throw std::runtime_error("Type " + std::string(typeid(AdditionalInterface).name()) + " already registered in IoC container");
+        }
+
+        if (ResolveAliasType(primaryType) == additionalType) {
+            throw std::runtime_error("IocContainer: alias loop detected for type: " + std::string(typeid(AdditionalInterface).name()));
+        }
+
+        _serviceAliases[additionalType] = primaryType;
+
+        Service service;
+        service.Lifetime = primaryIt->second.Lifetime;
+        service.Creator = &CreateAlias<PrimaryInterface>;
+        service.CreatorWithOverrides = &CreateAliasWithOverrides<PrimaryInterface>;
+        service.DependencyTypes = {};
+        _serviceRegistry[additionalType] = service;
+    }
+
+    /**
      * @brief Resolve a service by interface or implementation type
      * @tparam Interface The interface or implementation that it was registered with
      * @return When singleton: always the same instance of the given type. When transient: always a new instance of the given type
@@ -161,7 +199,8 @@ public:
         auto& service = GetService<Interface>();
 
         if (service.Lifetime == EServiceLifetime::Singleton) {
-            throw std::runtime_error("IocContainer: Resolving a new instance of singleton type: " + std::string(typeid(Interface).name()));
+            if (service.Instance)
+                std::static_pointer_cast<Interface>(service.Instance);
         }
 
         std::vector<std::pair<const std::type_info*, std::shared_ptr<void>>> overrides = {
@@ -185,7 +224,8 @@ public:
         auto& service = GetKeyedService<Interface, Implementation>();
 
         if (service.Lifetime == EServiceLifetime::Singleton) {
-            throw std::runtime_error("IocContainer: Resolving a new instance of singleton type: " + std::string(typeid(Interface).name()));
+            if (service.Instance)
+                std::static_pointer_cast<Interface>(service.Instance);
         }
 
         std::vector<std::pair<const std::type_info*, std::shared_ptr<void>>> overrides = {
@@ -220,10 +260,18 @@ private:
 
     std::unordered_map<const std::type_info*, Service, TypeInfoHash, TypeInfoEqual> _serviceRegistry;
     std::unordered_map<const std::type_info*, std::unordered_map<const std::type_info*, Service, TypeInfoHash, TypeInfoEqual>, TypeInfoHash, TypeInfoEqual> _keyedServiceRegistry;
+    std::unordered_map<const std::type_info*, const std::type_info*, TypeInfoHash, TypeInfoEqual> _serviceAliases;
 
     template<typename Interface>
     Service& GetService( ) {
-        auto it = _serviceRegistry.find(TypeId<Interface>());
+        auto requestedType = TypeId<Interface>();
+        auto it = _serviceRegistry.find(requestedType);
+        if (it != _serviceRegistry.end()) {
+            return it->second;
+        }
+
+        auto resolvedType = ResolveAliasType(requestedType);
+        it = _serviceRegistry.find(resolvedType);
         if (it == _serviceRegistry.end()) {
             throw std::runtime_error("Type " + std::string(typeid(Interface).name()) + " not registered in IoC container");
         }
@@ -254,6 +302,7 @@ private:
         service.CreatorWithOverrides = &CreateWithOverrides<Implementation, Dependencies...>;
         service.DependencyTypes = { TypeId<Dependencies>()... };
         _serviceRegistry[TypeId<Interface>()] = service;
+        _serviceAliases.erase(TypeId<Interface>());
     }
 
     template<typename Interface, typename Implementation, typename... Dependencies>
@@ -278,6 +327,21 @@ private:
     ) {
         return std::make_shared<Implementation>(
             ResolveOrOverride<Dependencies>(container, overrides)...);
+    }
+
+    template<typename PrimaryInterface>
+    static std::shared_ptr<void> CreateAlias(IocContainer* container) {
+        auto instance = container->Resolve<PrimaryInterface>();
+        return std::static_pointer_cast<void>(instance);
+    }
+
+    template<typename PrimaryInterface>
+    static std::shared_ptr<void> CreateAliasWithOverrides(
+        IocContainer* container,
+        const std::vector<std::pair<const std::type_info*, std::shared_ptr<void>>>& overrides
+    ) {
+        (void)overrides;
+        return CreateAlias<PrimaryInterface>(container);
     }
 
     template<typename T>
@@ -314,6 +378,11 @@ private:
                 return std::static_pointer_cast<T>(instance);
             }
         }
+        for (const auto& [type, instance] : overrides) {
+            if (container->IsAdditionalAliasMatch(key, type)) {
+                return std::static_pointer_cast<T>(instance);
+            }
+        }
         return container->Resolve<T>();
     }
 
@@ -330,6 +399,26 @@ private:
     template<typename T>
     static const std::type_info* TypeId() {
         return &typeid(T);
+    }
+
+    const std::type_info* ResolveAliasType(const std::type_info* type) const {
+        auto current = type;
+        size_t remaining = _serviceAliases.size() + 1;
+        while (remaining-- > 0) {
+            auto it = _serviceAliases.find(current);
+            if (it == _serviceAliases.end()) {
+                return current;
+            }
+            current = it->second;
+        }
+        throw std::runtime_error("IocContainer: alias resolution exceeded expected depth");
+    }
+
+    bool IsAdditionalAliasMatch(const std::type_info* dependencyType, const std::type_info* overrideType) const {
+        if (overrideType == dependencyType) {
+            return true;
+        }
+        return ResolveAliasType(dependencyType) == overrideType;
     }
 };
 

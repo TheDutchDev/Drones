@@ -5,7 +5,7 @@
 
 #include "IPwmProvider.h"
 
-RS2205BLDCMotor::RS2205BLDCMotor(const std::shared_ptr<IMotorData>& motorData)
+RS2205BLDCMotor::RS2205BLDCMotor(const std::shared_ptr<IMoreMotorData>& motorData)
     : _motorData(motorData) {
     _motorDataEventHandle = _motorData->OnPropertyModified->Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
 }

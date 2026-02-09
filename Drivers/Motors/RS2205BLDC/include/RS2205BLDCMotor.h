@@ -12,7 +12,7 @@
 class RS2205BLDCMotor : public IMotor {
 public:
     explicit RS2205BLDCMotor(
-        const std::shared_ptr<IMotorData>& motorData
+        const std::shared_ptr<IMoreMotorData>& motorData
     );
     ~RS2205BLDCMotor();
     void Initialize() override;
