@@ -4,6 +4,7 @@
 #include "IDataModel.h"
 #include "IFloatProperty.h"
 #include "IProperty.h"
+#include "PwmConfig.h"
 
 class IMotorData : public IDataModel {
 
@@ -23,6 +24,9 @@ public:
     IFloatProperty MinDuty = IFloatProperty(0.05f, 0, 100, EPropertyType::MotorMinDuty);
     IFloatProperty MaxDuty = IFloatProperty(0.10f, 0, 100, EPropertyType::MotorMaxDuty);
     IFloatProperty DisarmedDuty = IFloatProperty(0.0f, 0, 100, EPropertyType::MotorDisarmedDuty);
+
+    PwmConfig Pwm{};
+    bool PwmConfigured = false;
 };
 
 #endif // IMOTORDATA_H

@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "IDataModule.h"
+#include "PwmConfig.h"
 
 class DataModule : public IDataModule {
 public:
@@ -26,29 +27,38 @@ public:
 
         IDataModule::HookDataModels();
 
-        // HalPwmConfig motor1Cfg{};
-        // motor1Cfg.timer = HalTimer::Tim3;
-        // motor1Cfg.channel = HalTimerChannel::Ch1;
-        // motor1Cfg.pin = {HalPort::B, 4};
-        // motor1Cfg.frequencyHz = 50;
-        //
-        // HalPwmConfig motor2Cfg{};
-        // motor2Cfg.timer = HalTimer::Tim3;
-        // motor2Cfg.channel = HalTimerChannel::Ch2;
-        // motor2Cfg.pin = {HalPort::B, 5};
-        // motor2Cfg.frequencyHz = 50;
-        //
-        // HalPwmConfig motor3Cfg{};
-        // motor3Cfg.timer = HalTimer::Tim3;
-        // motor3Cfg.channel = HalTimerChannel::Ch3;
-        // motor3Cfg.pin = {HalPort::B, 0};
-        // motor3Cfg.frequencyHz = 50;
-        //
-        // HalPwmConfig motor4Cfg{};
-        // motor4Cfg.timer = HalTimer::Tim3;
-        // motor4Cfg.channel = HalTimerChannel::Ch4;
-        // motor4Cfg.pin = {HalPort::B, 1};
-        // motor4Cfg.frequencyHz = 50;
+        PwmConfig motor1Cfg{};
+        motor1Cfg.timer = EHalTimer::Tim3;
+        motor1Cfg.channel = EHalTimerChannel::Ch1;
+        motor1Cfg.pin = {EHalPort::B, 4};
+        motor1Cfg.frequencyHz = 50.0f;
+
+        PwmConfig motor2Cfg{};
+        motor2Cfg.timer = EHalTimer::Tim3;
+        motor2Cfg.channel = EHalTimerChannel::Ch2;
+        motor2Cfg.pin = {EHalPort::B, 5};
+        motor2Cfg.frequencyHz = 50.0f;
+
+        PwmConfig motor3Cfg{};
+        motor3Cfg.timer = EHalTimer::Tim3;
+        motor3Cfg.channel = EHalTimerChannel::Ch3;
+        motor3Cfg.pin = {EHalPort::B, 0};
+        motor3Cfg.frequencyHz = 50.0f;
+
+        PwmConfig motor4Cfg{};
+        motor4Cfg.timer = EHalTimer::Tim3;
+        motor4Cfg.channel = EHalTimerChannel::Ch4;
+        motor4Cfg.pin = {EHalPort::B, 1};
+        motor4Cfg.frequencyHz = 50.0f;
+
+        Motor1->Pwm = motor1Cfg;
+        Motor1->PwmConfigured = true;
+        Motor2->Pwm = motor2Cfg;
+        Motor2->PwmConfigured = true;
+        Motor3->Pwm = motor3Cfg;
+        Motor3->PwmConfigured = true;
+        Motor4->Pwm = motor4Cfg;
+        Motor4->PwmConfigured = true;
     }
 
 
