@@ -8,7 +8,7 @@
 
 class IPropertyBase; // Forward declaration
 
-#define MAX_PROPERTY_EVENT_SUBSCRIPTIONS 50
+#define MAX_PROPERTY_EVENT_SUBSCRIPTIONS 5
 typedef Event<MAX_PROPERTY_EVENT_SUBSCRIPTIONS, IPropertyBase*> PropertyModifiedDelegate;
 
 class IPropertyBase {

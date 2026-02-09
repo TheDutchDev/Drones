@@ -11,14 +11,14 @@
 
 class DataModule : public IDataModule {
 public:
-    DataModule(std::shared_ptr<IMotorData> motor1,
-               std::shared_ptr<IMotorData> motor2,
-               std::shared_ptr<IMotorData> motor3,
-               std::shared_ptr<IMotorData> motor4
-    ) : Motor1(std::move(motor1)),
-        Motor2(std::move(motor2)),
-        Motor3(std::move(motor3)),
-        Motor4(std::move(motor4)) {
+    DataModule(const std::shared_ptr<IMotorData> &motor1,
+               const std::shared_ptr<IMotorData> &motor2,
+               const std::shared_ptr<IMotorData> &motor3,
+               const std::shared_ptr<IMotorData> &motor4
+    ) : Motor1(motor1),
+        Motor2(motor2),
+        Motor3(motor3),
+        Motor4(motor4) {
 
         _dataModels.push_back(Motor1);
         _dataModels.push_back(Motor2);
