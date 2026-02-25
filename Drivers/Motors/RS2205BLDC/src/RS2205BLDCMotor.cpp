@@ -3,22 +3,36 @@
 #include <algorithm>
 #include <cmath>
 
-#include "IPwmProvider.h"
+#include "GpOutput.h"
 
 RS2205BLDCMotor::RS2205BLDCMotor(const std::shared_ptr<IMoreMotorData>& motorData)
     : _motorData(motorData) {
-    _motorDataEventHandle = _motorData->OnPropertyModified->Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    if (_motorData != nullptr) {
+        _motorDataEventHandle = _motorData->OnPropertyModified->Subscribe(this, &RS2205BLDCMotor::OnPropertyModified);
+    }
 }
 
 RS2205BLDCMotor::~RS2205BLDCMotor() {
-    _motorData->OnPropertyModified->Unsubscribe(_motorDataEventHandle);
+    if (_motorData != nullptr && _motorDataEventHandle >= 0) {
+        _motorData->OnPropertyModified->Unsubscribe(_motorDataEventHandle);
+    }
 }
 
 void RS2205BLDCMotor::Initialize() {
-    auto *provider = GetPwmProvider();
+    _initialized = false;
+    _output.reset();
 
-    _output = provider->Create(_motorData->Pwm);
-    _initialized = _output.IsValid();
+    if (_motorData == nullptr || !_motorData->PwmConfigured) {
+        return;
+    }
+
+    auto output = std::make_unique<GpOutput>(_motorData->Pwm);
+    if (!output->Initialize()) {
+        return;
+    }
+
+    _output = std::move(output);
+    _initialized = true;
     SetDuty(_motorData->DisarmedDuty.Value());
 }
 
@@ -76,10 +90,10 @@ void RS2205BLDCMotor::ApplyTargetDuty() {
 }
 
 void RS2205BLDCMotor::SetDuty(float duty) {
-    if (!_output.IsValid()) {
+    if (_output == nullptr || !_output->IsValid()) {
         return;
     }
 
-    _output.SetDuty(duty);
+    _output->SetDuty(duty);
     _lastDuty = duty;
 }

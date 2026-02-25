@@ -6,8 +6,8 @@
 
 #include "IMotor.h"
 #include "IMotorData.h"
+#include "IGpOutput.h"
 #include "IProperty.h"
-#include "PwmOutput.h"
 
 class RS2205BLDCMotor : public IMotor {
 public:
@@ -24,7 +24,7 @@ private:
     void SetDuty(float duty);
     void OnPropertyModified(IPropertyBase *propertyBase);
     std::shared_ptr<IMotorData> _motorData;
-    PwmOutput _output{};
+    std::unique_ptr<IGpOutput> _output{};
     float _lastDuty = -1.0f;
     bool _initialized = false;
     int _motorDataEventHandle {-1};
